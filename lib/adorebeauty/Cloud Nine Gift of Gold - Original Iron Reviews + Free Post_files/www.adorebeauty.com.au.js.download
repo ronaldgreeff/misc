@@ -1,0 +1,24 @@
+BOOMR.subscribe("before_beacon", function (e) {
+  BOOMR.addVar('sctio_env', '863-1739-3304');
+  var pageName = 'Uncategorised';
+
+  if (pagetype) {
+    pageName = pagetype;
+  }
+
+if (window.location.href.match('/checkout/onepage/success/')) {
+    BOOMR.addVar('sq_cv', '1');
+}
+  BOOMR.addVar('sq_pt', window.sq_pagetype_override_12345 || pageName);
+});
+
+
+BOOMR.init({
+    beacon_url: "//bacon.section.io/navigationtiming",
+    site_domain: document.location.hostname.replace("www.", ""),
+    log: null,
+    cfg_loaded: true,
+    RT: {
+      strict_referrer: false
+    }
+  });

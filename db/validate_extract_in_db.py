@@ -14,12 +14,6 @@ DB_DIR = os.path.join(CURRENT_DIR, 'extracts.db')
 database = SqliteDatabase(DB_DIR)
 
 
-def log(string):
-    with open(os.path.join(CURRENT_DIR, 'log.txt'), 'a') as f:
-        f.write('{}\n'.format(string))
-        print(string)
-
-
 class BaseModel(Model):
     class Meta:
         database = database

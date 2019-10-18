@@ -7,7 +7,6 @@ from selenium.webdriver.firefox.options import Options
 
 CURRENT_FOLDER = os.path.dirname(__file__)
 PROJECT_ROOT = os.path.join(CURRENT_FOLDER, '..')
-SCREENS = os.path.join(PROJECT_ROOT, 'screenshots')
 
 class Driver_Config():
 	""" Driver options. Important to set a consistent window size."""
@@ -28,9 +27,14 @@ class SelDriver(Driver_Config):
 		print('\nq sel...{}\n'.format(m))
 		self.driver.quit()
 
-	def save_screenshot(self, screenshot_name):
+	def save_screenshot(self, screenshot_name, screenshot_folder=False):
 		""" Store screenshot by given name """
-		screenshot_location = os.path.join(SCREENS, '{}.png'.format(screenshot_name))
+		if not screenshot_folder:
+			screenshot_folder = os.path.join(PROJECT_ROOT, 'screenshots')
+
+		screenshot_location = os.path.join(
+			screenshot_folder, '{}.png'.format(screenshot_name))
+
 		self.driver.save_screenshot(screenshot_location)
 		# return screenshot_location
 
