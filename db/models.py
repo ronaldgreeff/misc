@@ -11,38 +11,42 @@ class BaseModel(Model):
 	class Meta:
 		database = database
 
-
+### SITE
 class Site(BaseModel):
 	name = CharField(unique=True, null=False)
 
+### URL
+class URLScheme(BaseModel):
+	scheme = CharField(unique=True, null=True)
+
+class URLNetloc(BaseModel)
+	netloc = CharField(unique=True, null=True)
+
+class URLPath(BaseModel):
+	path = CharField(unique=True, null=True)
+
+class URLQuery(BaseModel):
+	url = ForeignKeyField(URL)
+	query = CharField(unique=True, null=True)
+
+class URLFragment(BaseModel):
+	url = ForeignKeyField(URL)
+	fragment = CharField(unique=True, null=True)
 
 class URL(BaseModel):
 	site = ForeignKeyField(Site, backref='urls')
-	scheme = CharField()
-	path = CharField(null=True)
-	params = CharField(null=True)
-	query = CharField(null=True)
-	fragment = CharField(null=True)
+	scheme = ForeignKeyField(URLScheme)
+	netloc = ForeignKeyField(URLScheme)
+	path = ForeignKeyField(URLPath, null=True)
+	query = ForeignKeyField(URLQuery, null=True)
+	fragment = ForeignKeyField(URLFragment, null=True)
 
-
-class Link(BaseModel):
-	record = ForeignKeyField(Record, backref='links')
-	link = CharField(unique=True, null=False)
-
-class MetaDataType(BaseModel):
-	of_type = CharField()
-
-class MetaData(BaseModel):
-	record = ForeignKeyField(Record, backref='')
-	_type = ForeignKeyField(MetaDataType, backref='meta_data')
-	value = CharField()
-
+### RECORD
 class Record(BaseModel):
 	url = OneToOneField(URL, primary_key=True)
-	title = OneToOneField(Block, null=True, backref='record')
 	date = DateTimeField()
 	screenshot = CharField(null=True)
-	title = OneToOneField(Block, null=True)
+	title = OneToOneField(Block, null=True, backref='record') # title assigned to the record
 	price = OneToOneField(Block, null=True)
 	sale_price = OneToOneField(Block, null=True)
 	rating = OneToOneField(Block, null=True)
@@ -53,13 +57,20 @@ class Description(BaseModel):
 	block = OneToOneField(Block, null=True)
 
 class Review(BaseModel):
-	record = ForeignKeyField()
+	record = ForeignKeyField(Record)
 	block = OneToOneField(Block, null=True)
 
 class Title(BaseModel):
+	"""Holds a list of titles (from page, twitter and fb)
+	found, NOT the title assigned to the record"""
 	record = ForeignKeyField(Record, backref='titles')
 	title = CharField(unique=True, null=True)
 
+class Link(BaseModel):
+	record = ForeignKeyField(Record, backref='links')
+	link = CharField(unique=True, null=False)
+
+### BLOCK
 class Block(BaseModel):
 	record = ForeignKeyField(Record, backref='blocks')
 	block_type = CharField()
@@ -134,3 +145,10 @@ class SelecClass(BaseModel): #* selecclass_id
 	name = CharField(unique=True)
 
 
+class MetaDataType(BaseModel):
+	of_type = CharField()
+
+class MetaData(BaseModel):
+	record = ForeignKeyField(Record, backref='')
+	_type = ForeignKeyField(MetaDataType, backref='meta_data')
+	value = CharField()

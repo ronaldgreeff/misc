@@ -36,10 +36,11 @@ def create_tables():
 
 
 class Record():
+
     def __init__(self, site, url, screenshot, extract):
 
         self.site = site
-        self.url = url
+        self.parsed_url = urlparse(url)
         self.screenshot = screenshot
 
         self.meta_data = extract['meta_tags'] # TODO
@@ -57,66 +58,79 @@ class Record():
         self.blocks = (
             [('body', extract['body'])] + sorted_texts_images)
 
-        # site, _ = self.get_create(models.Site, name=self.site)
-
-    def get_create(self, object_type, **kwargs):
+    def get_or_create(self, object_type, **kwargs):
+        # site, _ = self.get_or_create(models.Site, name=self.site)
         # `username` is a TODO***unique*** column,
         # so this username already exists,
         # making it safe to call .get().
         try:
             db_obj = object_type.create(**kwargs)
-            return db_obj.id, True
+            return db_obj, True
         except peewee.IntegrityError:
-            return object_type.get(**kwargs).id, False
+            return object_type.get(**kwargs), False
 
-        # Create x
-        ############
-        # create site
-        # create url
-        # create title
-        # create record
-        # - fk site
-        # - url
-        # - screenshot
-        # - title
-        # - price
-        # - sale_price
-        # - rating
-        # - summary
-        # - description
-        # - review
-        # for title in titles
-        # for link in links
-        # for block in blocks
-        #  for k,v in block[computed]:
-        #  for bound in block[bound]
-        #  for element in block[element]
-        #   element_id
-        #   element_name
-        #   for class in element[classes]
-        #    class *through
-        #  for path in block[path]
-        #   for tag in path
-        #  for selector in block[selector]
-        #   selector_id
-        #   selector_name
-        #   for class in selector[classes]
-        #    class *through
+    # def bulk_insert(object_type, list_dicts):
+    #     object_type.insert(list_dicts).execute()
 
-    def CreateRecord():
+
+    def create_domain_level():
 
         site, _ = models.Site.get_or_create(
             name=self.site)
 
-        self.parsed_url = urlparse(url)
-
+        scheme = self.parsed_url.scheme
+        netloc = self.parsed_url.netloc
         path = self.parsed_url.path
-        params = self.parsed_url.params
         query = self.parsed_url.query
         fragment = self.parsed_url.fragment
 
+        def select_or_build(obj_type, **kwargs):
+            q = obj_type.select('id').where(**kwargs)
+            if not q.exists():
+                return obj_type(**kwargs)
+
+
+        if not URLScheme.select().where(URLScheme.scheme==self.site).exists():
+            objs2create.append( Site(name==self.site) )
+
+        if not URLNetloc.select().where(URLNetloc.scheme==self.site).exists():
+            objs2create.append( Site(name==self.site) )
+
+        if not URLPath.select().where(Site.name==self.site).exists():
+            objs2create.append( Site(name==self.site) )
+
+        if not URL.select().where(Site.name==self.site).exists():
+            objs2create.append( Site(name==self.site) )
+
+        param
+        url_param
+
+
+        for url_param in x:
+            param, _ = self.get_or_create(models.URLparam, url_param)
+            objs2create.append(URLParam(url, param))
+
+        for url_query in x:
+            query, _ = self.get_or_create(url, query)
+            URLquery.create()
+
+        for url_frag in x:
+            frag, _ = self.get_or_create()
+            URLfragment.create(url, frag)
+
+
+        record, record_created = self.get_or_create(models.record
+            url
+            )
+
+            title, title_created = self.get_or_create(models.title, name=self.title)
+
+        db.commit()
+
+    def CreateRecord():
+
         with db.atomic():
-            get_create(object_type, **kwargs)
+            get_or_create(object_type, **kwargs)
 
         self.url, _ = models.URL.get_or_create(
             site = site,
@@ -132,10 +146,6 @@ class Record():
             screenshot = screenshot,
             defaults={'date': datetime.now()}
             )
-
-
-    def bulk_insert(object_type, list_dicts):
-        object_type.insert(list_dicts).execute()
 
 
     # timings = {}
