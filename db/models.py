@@ -13,7 +13,7 @@ class BaseModel(Model):
 
 
 class Site(BaseModel):
-	name = CharField()
+	name = CharField(unique=True, null=False)
 
 
 class URL(BaseModel):
@@ -25,15 +25,40 @@ class URL(BaseModel):
 	fragment = CharField(null=True)
 
 
-class Record(BaseModel):
-	url = ForeignKeyField(URL, primary_key=True, backref='record') # should be one to one
-	date = DateTimeField()
-	is_sale = BooleanField(null=True)
-	screenshot = CharField(null=True)
-	product_title = CharField(null=True)
-	product_price = CharField(null=True)
-	product_sale_price = CharField(null=True)
+class Link(BaseModel):
+	record = ForeignKeyField(Record, backref='links')
+	link = CharField(unique=True, null=False)
 
+class MetaDataType(BaseModel):
+	of_type = CharField()
+
+class MetaData(BaseModel):
+	record = ForeignKeyField(Record, backref='')
+	_type = ForeignKeyField(MetaDataType, backref='meta_data')
+	value = CharField()
+
+class Record(BaseModel):
+	url = OneToOneField(URL, primary_key=True)
+	title = OneToOneField(Block, null=True, backref='record')
+	date = DateTimeField()
+	screenshot = CharField(null=True)
+	title = OneToOneField(Block, null=True)
+	price = OneToOneField(Block, null=True)
+	sale_price = OneToOneField(Block, null=True)
+	rating = OneToOneField(Block, null=True)
+	summary = OneToOneField(Block, null=True)
+
+class Description(BaseModel):
+	record = ForeignKeyField(Record)
+	block = OneToOneField(Block, null=True)
+
+class Review(BaseModel):
+	record = ForeignKeyField()
+	block = OneToOneField(Block, null=True)
+
+class Title(BaseModel):
+	record = ForeignKeyField(Record, backref='titles')
+	title = CharField(unique=True, null=True)
 
 class Block(BaseModel):
 	record = ForeignKeyField(Record, backref='blocks')
@@ -109,20 +134,3 @@ class SelecClass(BaseModel): #* selecclass_id
 	name = CharField(unique=True)
 
 
-class Link(BaseModel):
-	record = ForeignKeyField(Record, backref='links')
-	link = CharField()
-
-
-class Title(BaseModel):
-	record = ForeignKeyField(Record, backref='titles')
-	title = CharField()
-
-
-class MetaDataType(BaseModel):
-	of_type = CharField()
-
-class MetaData(BaseModel):
-	record = ForeignKeyField(Record, backref='')
-	_type = ForeignKeyField(MetaDataType, backref='meta_data')
-	value = CharField()

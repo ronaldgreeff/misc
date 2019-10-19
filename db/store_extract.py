@@ -70,7 +70,6 @@ def store_product_age(url, site, screenshot, extract):
                 name=site
                 )
 
-
             parsed_url = urlparse(url)
 
             path = parsed_url.path
@@ -86,7 +85,6 @@ def store_product_age(url, site, screenshot, extract):
                 query = query if query else None,
                 fragment = fragment if fragment else None,
                 )
-
 
             orecord, _ = models.Record.get_or_create(
                 url = ourl,
