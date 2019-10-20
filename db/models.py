@@ -15,50 +15,40 @@ class BaseModel(Model):
 class Site(BaseModel):
 	name = CharField(unique=True, null=False)
 
-### URL
-class URLScheme(BaseModel):
-	scheme = CharField(unique=True, null=True)
-
-class URLNetloc(BaseModel)
-	netloc = CharField(unique=True, null=True)
-
-class URLPath(BaseModel):
-	path = CharField(unique=True, null=True)
-
-class URLQuery(BaseModel):
-	url = ForeignKeyField(URL)
-	query = CharField(unique=True, null=True)
-
-class URLFragment(BaseModel):
-	url = ForeignKeyField(URL)
-	fragment = CharField(unique=True, null=True)
-
-class URL(BaseModel):
-	site = ForeignKeyField(Site, backref='urls')
-	scheme = ForeignKeyField(URLScheme)
-	netloc = ForeignKeyField(URLScheme)
-	path = ForeignKeyField(URLPath, null=True)
-	query = ForeignKeyField(URLQuery, null=True)
-	fragment = ForeignKeyField(URLFragment, null=True)
-
 ### RECORD
 class Record(BaseModel):
-	url = OneToOneField(URL, primary_key=True)
+	site = ForeignKeyField(Site, backref='urls')
 	date = DateTimeField()
 	screenshot = CharField(null=True)
-	title = OneToOneField(Block, null=True, backref='record') # title assigned to the record
-	price = OneToOneField(Block, null=True)
-	sale_price = OneToOneField(Block, null=True)
-	rating = OneToOneField(Block, null=True)
-	summary = OneToOneField(Block, null=True)
 
-class Description(BaseModel):
-	record = ForeignKeyField(Record)
-	block = OneToOneField(Block, null=True)
+### URL
+class Scheme(BaseModel):
+	val = CharField(unique=True, null=True)
 
-class Review(BaseModel):
-	record = ForeignKeyField(Record)
-	block = OneToOneField(Block, null=True)
+class Netloc(BaseModel):
+	val = CharField(unique=True, null=True)
+
+class Path(BaseModel):
+	val = CharField(unique=True, null=True)
+
+class Param(BaseModel):
+	val = CharField(unique=True, null=True)
+
+class Query(BaseModel):
+	val = CharField(unique=True, null=True)
+
+class Fragment(BaseModel):
+	val = CharField(unique=True, null=True)
+
+class URL(BaseModel):
+	record = ForeignKeyField(Record, primary_key=True)
+	scheme = ForeignKeyField(Scheme)
+	netloc = ForeignKeyField(Netloc)
+	path = ForeignKeyField(Path)
+	params = ForeignKeyField(Param)
+	query = ForeignKeyField(Query)
+	fragment = ForeignKeyField(Fragment)
+
 
 class Title(BaseModel):
 	"""Holds a list of titles (from page, twitter and fb)
@@ -71,9 +61,13 @@ class Link(BaseModel):
 	link = CharField(unique=True, null=False)
 
 ### BLOCK
+class BlockType(BaseModel):
+	# unclassified, title, price, sale_price, rating, summary, description
+	typ_ = CharField(unique=True)
+
 class Block(BaseModel):
 	record = ForeignKeyField(Record, backref='blocks')
-	block_type = CharField()
+	block_type = ForeignKeyField(BlockType, null=True)
 	label = CharField(null=True)
 	scroll_left = CharField(null=True)
 	scroll_top = CharField(null=True)
@@ -118,9 +112,10 @@ class ElemClass(BaseModel):
 class Tag(BaseModel):
 	name = CharField(unique=True)
 
-class Path(BaseModel):
-	tag = ForeignKeyField(Tag, backref='paths')
-	block = ForeignKeyField(Block, backref='paths')
+# this Path needs a different name - different to existing path
+# class Path(BaseModel):
+# 	tag = ForeignKeyField(Tag, backref='paths')
+# 	block = ForeignKeyField(Block, backref='paths')
 
 
 class SelectorID(BaseModel):
