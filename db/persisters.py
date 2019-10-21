@@ -23,7 +23,7 @@ def create_tables():
     database.connect()
     with database:
         database.create_tables([Site,Record,
-            Scheme, Netloc, Path, Param, Query, Fragment, URL,
+            Scheme, Netloc, Path, Params, Query, Fragment, URL,
             ])
             # URL, Record, Block, #Blocks,
             # CSSParam, Computed, Bound,
@@ -59,46 +59,86 @@ class TopLevel():
         self.blocks = (
             [('body', extract['body'])] + sorted_texts_images)
 
-    def get_or_create(self, object_type, **kwargs):
-        # site, _ = self.get_or_create(Site, name=self.site)
-        # `username` is a TODO***unique*** column,
-        # so this username already exists,
-        # making it safe to call .get().
-        try:
-            db_obj = object_type.create(**kwargs)
-            return db_obj, True
-        except peewee.IntegrityError:
-            return object_type.get(**kwargs), False
-
+    # def get_or_create(self, object_type, **kwargs):
+    #     # site, _ = self.get_or_create(Site, name=self.site)
+    #     # `username` is a TODO***unique*** column,
+    #     # so this username already exists,
+    #     # making it safe to call .get().
+    #     try:
+    #         db_obj = object_type.create(**kwargs)
+    #         return db_obj, True
+    #     except peewee.IntegrityError:
+    #         return object_type.get(**kwargs), False
+    #
     # def bulk_insert(object_type, list_dicts):
     #     object_type.insert(list_dicts).execute()
 
+        # def search_insert(obj_type, *where_args, **insert_kwargs):
+        #     q = obj_type.select().where(*where_args)
+        #     if q.exists():
+        #         return q
+        #     else:
+        #         return obj_type.insert(**insert_kwargs) #.execute()
 
-    def create_domain_level(self):
-
-        def qget(obj_type, *where_args, **insert_kwargs):
-            q = obj_type.select().where(*where_args)
-            if q.exists():
-                return q
+        def search_insert(obj_type, *where_args, **insert_kwargs):
+            """
+            return a select query if object exists, else create it and return query
+            """
+            query = obj_type.select().where(*where_args)
+            if query.exists():
+                pass
             else:
-                return obj_type.insert(**insert_kwargs) #.execute()
+                obj_type.insert(**insert_kwargs).execute()
+            return query
 
-        site = qget(Site, [Site.name==self.site], name=self.site)
-        # for site in site.execute():
-        # instead of executing, now just holding the queries - see if can execute many (may have to alias)
+        def insert_getq(obj_type, **insert_kwargs):
+            """
+            insert row, return query
+            """
+            query = obj_type.insert(**insert_kwargs)
+            query.execute()
+            return query
 
-        query = Record.insert(site=site, date=datetime.now(), screenshot=self.screenshot)
-        record_id = query.execute()
-        record = Record.select().where(Record.id == record_id)
+        # site = search_insert(Site, [Site.name==self.site], name=self.site)
+        site_found = Site.select().where(Site.name==self.site)
+        if not site_found.exists():
+            obj_type.insert(**insert_kwargs).execute()
 
-        for c, i in enumerate((Scheme, Netloc, Path, Param, Query, Fragment)):
-            qget(i, [i.val==self.parsed_url[c]], val=self.parsed_url[c])
+        # record = insert_getq(
+        #     obj_type=Record,
+        #     site=site,
+        #     date=datetime.now(),
+        #     screenshot=self.screenshot)
 
-        # print(self.parsed_url[0])
-        # url_scheme = qget(Scheme, [Scheme.val== self.parsed_url[0]], val=self.parsed_url[0])
+        record = Record.insert(
+            site=site,
+            date=datetime.now(),
+            screenshot=self.screenshot)
 
-            # url = (URL)
+        # url_kwargs = {
+        #     'record': record,
+        # }
 
+        # for c, v in enumerate((
+        #     ('scheme', Scheme), ('netloc', Netloc), ('path', Path),
+        #     ('params', Params), ('query', Query), ('fragment', Fragment))):
+
+        #     key = v[0]
+        #     Obj = v[1]
+
+        #     url_kwargs[key] = (search_insert(Obj, [Obj.val==self.parsed_url[c]], val=self.parsed_url[c]))
+
+        # url = search_insert(URL, [
+        #     URL.scheme==url_kwargs['scheme'],
+        #     # URL.netloc==url_kwargs['netloc'],
+        #     # URL.path==url_kwargs['path'],
+        #     # URL.params==url_kwargs['params'],
+        #     # URL.query==url_kwargs['query'],
+        #     # URL.fragment==url_kwargs['fragment'],
+        #     ],)
+
+        print(site)
+        print(record)
 
         def select_or_build(obj_type, **kwargs):
             q = obj_type.select('id').where(**kwargs)
@@ -139,4 +179,3 @@ if __name__ == '__main__':
             screenshot='_test__boots.png',
             extract=extract()
         )
-    r.create_domain_level()

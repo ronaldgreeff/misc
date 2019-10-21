@@ -11,6 +11,7 @@ class BaseModel(Model):
 	class Meta:
 		database = database
 
+
 ### SITE
 class Site(BaseModel):
 	name = CharField(unique=True, null=False)
@@ -31,7 +32,7 @@ class Netloc(BaseModel):
 class Path(BaseModel):
 	val = CharField(unique=True, null=True)
 
-class Param(BaseModel):
+class Params(BaseModel):
 	val = CharField(unique=True, null=True)
 
 class Query(BaseModel):
@@ -45,7 +46,7 @@ class URL(BaseModel):
 	scheme = ForeignKeyField(Scheme)
 	netloc = ForeignKeyField(Netloc)
 	path = ForeignKeyField(Path)
-	params = ForeignKeyField(Param)
+	params = ForeignKeyField(Params)
 	query = ForeignKeyField(Query)
 	fragment = ForeignKeyField(Fragment)
 
