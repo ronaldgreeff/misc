@@ -16,12 +16,6 @@ class BaseModel(Model):
 class Site(BaseModel):
 	name = CharField(unique=True, null=False)
 
-### RECORD
-class Record(BaseModel):
-	site = ForeignKeyField(Site, backref='urls')
-	date = DateTimeField()
-	screenshot = CharField(null=True)
-
 ### URL
 class Scheme(BaseModel):
 	val = CharField(unique=True, null=True)
@@ -42,7 +36,7 @@ class Fragment(BaseModel):
 	val = CharField(unique=True, null=True)
 
 class URL(BaseModel):
-	record = ForeignKeyField(Record, primary_key=True)
+	# record = ForeignKeyField(Record, primary_key=True)
 	scheme = ForeignKeyField(Scheme)
 	netloc = ForeignKeyField(Netloc)
 	path = ForeignKeyField(Path)
@@ -50,16 +44,34 @@ class URL(BaseModel):
 	query = ForeignKeyField(Query)
 	fragment = ForeignKeyField(Fragment)
 
+### RECORD
+class Record(BaseModel):
+	url = ForeignKeyField(URL, primary_key=True)
+	site = ForeignKeyField(Site, backref='urls')
+	date = DateTimeField()
+	screenshot = CharField(null=True)
+
 
 class Title(BaseModel):
-	"""Holds a list of titles (from page, twitter and fb)
-	found, NOT the title assigned to the record"""
+	"""
+	Holds a list of titles (from page, twitter and fb)
+	found, NOT the title assigned to the record
+	"""
 	record = ForeignKeyField(Record, backref='titles')
 	title = CharField(unique=True, null=True)
 
 class Link(BaseModel):
 	record = ForeignKeyField(Record, backref='links')
 	link = CharField(unique=True, null=False)
+	visited = BooleanField(default=False)
+
+class MetaDataType(BaseModel):
+	name = CharField()
+
+class MetaData(BaseModel):
+	record = ForeignKeyField(Record, backref='')
+	key = ForeignKeyField(MetaDataType, backref='meta_data')
+	val = CharField()
 
 ### BLOCK
 class BlockType(BaseModel):
@@ -139,12 +151,3 @@ class SelecClass(BaseModel): #* selecclass_id
 	# 	constraints=[SQL('AUTO_INCREMENT')]) # http://docs.peewee-orm.com/en/latest/peewee/models.html#indexes-and-constraints
 	selectors = ManyToManyField(Selector, backref='selector_classes')
 	name = CharField(unique=True)
-
-
-class MetaDataType(BaseModel):
-	of_type = CharField()
-
-class MetaData(BaseModel):
-	record = ForeignKeyField(Record, backref='')
-	_type = ForeignKeyField(MetaDataType, backref='meta_data')
-	value = CharField()

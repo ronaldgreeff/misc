@@ -22,8 +22,9 @@ class BaseModel(Model):
 def create_tables():
     database.connect()
     with database:
-        database.create_tables([Site,Record,
+        database.create_tables([Site, Record,
             Scheme, Netloc, Path, Params, Query, Fragment, URL,
+            Title, Link, MetaData, MetaDataType,
             ])
             # URL, Record, Block, #Blocks,
             # CSSParam, Computed, Bound,
@@ -44,7 +45,7 @@ class TopLevel():
         self.parsed_url = urlparse(url)
         self.screenshot = screenshot
 
-        self.meta_data = extract['meta_tags'] # TODO
+        self.meta_data = extract['meta_tags']
         self.links = extract['links']
         self.titles = extract['titles']
 
@@ -69,101 +70,107 @@ class TopLevel():
     #         return db_obj, True
     #     except peewee.IntegrityError:
     #         return object_type.get(**kwargs), False
-    #
-    # def bulk_insert(object_type, list_dicts):
-    #     object_type.insert(list_dicts).execute()
 
-        # def search_insert(obj_type, *where_args, **insert_kwargs):
-        #     q = obj_type.select().where(*where_args)
-        #     if q.exists():
-        #         return q
-        #     else:
-        #         return obj_type.insert(**insert_kwargs) #.execute()
+        q_site_name = Site.select().where(Site.name==self.site)
+        if not q_site_name.exists():
+            Site.insert(name=self.site).execute()
 
-        def search_insert(obj_type, *where_args, **insert_kwargs):
-            """
-            return a select query if object exists, else create it and return query
-            """
-            query = obj_type.select().where(*where_args)
-            if query.exists():
-                pass
-            else:
-                obj_type.insert(**insert_kwargs).execute()
-            return query
+        q_scheme_val = Scheme.select().where(Scheme.val==self.parsed_url[0])
+        if not q_scheme_val.exists():
+            Scheme.insert(val=self.parsed_url[0]).execute()
+        q_netloc_val = Netloc.select().where(Netloc.val==self.parsed_url[1])
+        if not q_netloc_val.exists():
+            Netloc.insert(val=self.parsed_url[1]).execute()
+        q_path_val = Path.select().where(Path.val==self.parsed_url[2])
+        if not q_path_val.exists():
+            Path.insert(val=self.parsed_url[2]).execute()
+        q_params_val = Params.select().where(Params.val==self.parsed_url[3])
+        if not q_params_val.exists():
+            Params.insert(val=self.parsed_url[3]).execute()
+        q_query_val = Query.select().where(Query.val==self.parsed_url[4])
+        if not q_query_val.exists():
+            Query.insert(val=self.parsed_url[4]).execute()
+        q_fragment_val = Fragment.select().where(Fragment.val==self.parsed_url[5])
+        if not q_fragment_val.exists():
+            Fragment.insert(val=self.parsed_url[5]).execute()
 
-        def insert_getq(obj_type, **insert_kwargs):
-            """
-            insert row, return query
-            """
-            query = obj_type.insert(**insert_kwargs)
-            query.execute()
-            return query
-
-        # site = search_insert(Site, [Site.name==self.site], name=self.site)
-        site_found = Site.select().where(Site.name==self.site)
-        if not site_found.exists():
-            obj_type.insert(**insert_kwargs).execute()
-
-        # record = insert_getq(
-        #     obj_type=Record,
-        #     site=site,
-        #     date=datetime.now(),
-        #     screenshot=self.screenshot)
-
-        record = Record.insert(
-            site=site,
-            date=datetime.now(),
-            screenshot=self.screenshot)
-
-        # url_kwargs = {
-        #     'record': record,
-        # }
-
-        # for c, v in enumerate((
-        #     ('scheme', Scheme), ('netloc', Netloc), ('path', Path),
-        #     ('params', Params), ('query', Query), ('fragment', Fragment))):
-
-        #     key = v[0]
-        #     Obj = v[1]
-
-        #     url_kwargs[key] = (search_insert(Obj, [Obj.val==self.parsed_url[c]], val=self.parsed_url[c]))
-
-        # url = search_insert(URL, [
-        #     URL.scheme==url_kwargs['scheme'],
-        #     # URL.netloc==url_kwargs['netloc'],
-        #     # URL.path==url_kwargs['path'],
-        #     # URL.params==url_kwargs['params'],
-        #     # URL.query==url_kwargs['query'],
-        #     # URL.fragment==url_kwargs['fragment'],
-        #     ],)
-
-        print(site)
-        print(record)
-
-        def select_or_build(obj_type, **kwargs):
-            q = obj_type.select('id').where(**kwargs)
-            if not q.exists():
-                return obj_type(**kwargs)
-
-    def CreateRecord():
-
-        with db.atomic():
-            get_or_create(object_type, **kwargs)
-
-        self.url, _ = URL.get_or_create(
-            site = site,
-            scheme = parsed_url.scheme,
-            path = path if path else None,
-            params = params if params else None,
-            query = query if query else None,
-            fragment = fragment if fragment else None,
+        q_url = URL.select().where(
+            URL.scheme==q_scheme_val,
+            URL.netloc==q_netloc_val,
+            URL.path==q_path_val,
+            URL.params==q_params_val,
+            URL.query==q_query_val,
+            URL.fragment==q_fragment_val,
             )
+        if not q_url.exists():
+            URL.insert(
+                scheme=q_scheme_val,
+                netloc=q_netloc_val,
+                path=q_path_val,
+                params=q_params_val,
+                query=q_query_val,
+                fragment=q_fragment_val,
+                ).execute()
 
-        self.record, _ = Record.get_or_create(
-            url = self.url,
-            screenshot = screenshot,
-            defaults={'date': datetime.now()}
-            )
+        q_record_url = Record.select().where(Record.url==q_url)
+        if not q_record_url.exists():
+            Record.insert(
+                url=q_url,
+                site=site,
+                date=datetime.now(),
+                screenshot=self.screenshot).execute()
+
+        for title in self.titles:
+            q_title = Title.select().where(
+                Title.record==q_record_url,
+                Title.title==title)
+            if not q_title.exists():
+                Title.insert(
+                    record=q_record_url,
+                    title=title
+                    ).execute()
+
+        # TODO before adding links, clean the links, then bulk add them
+        # for link in self.links:
+        #     q_link = Link.select().where(
+        #         Link.record==q_record_url,
+        #         Link.link==link)
+        #     if not q_link.exists():
+        #         Link.insert(
+        #             record=q_record_url,
+        #             link=link
+        #             ).execute()
+
+        for meta_key, meta_val in self.meta_data.items():
+            if meta_key not in ('msapplication-TileColor',): # TODO add more exclusions
+                
+                q_metadatatype = MetaDataType.select().where(MetaDataType.name==meta_key)
+                if not q_metadatatype.exists():
+                    MetaDataType.insert(name=meta_key).execute()
+
+                q_metadata = MetaData.select().where(
+                    MetaData.record==q_record_url,
+                    MetaData.key==q_metadatatype,
+                    MetaData.val==meta_val)
+                if not q_metadatatype.exists():
+                    MetaData.insert(
+                        record=q_record_url,
+                        key=meta_key,
+                        val=meta_val)
+
+        d = {
+        'body':0,
+        'image':0,
+        'text':0,
+        }
+        for block in self.blocks:
+            block_type = block[0]
+            block_data = block[1]
+            d[block_type]+=1
+        
+            if block_type == "text"
+            elif "image"
+            else
 
 
 if __name__ == '__main__':
