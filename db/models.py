@@ -14,29 +14,29 @@ class BaseModel(Model):
 
 ### SITE
 class Site(BaseModel):
-	name = CharField(unique=True, null=False)
+	name = CharField(null=False)
 
 ### URL
 class Scheme(BaseModel):
-	val = CharField(unique=True, null=True)
+	val = CharField()
 
 class Netloc(BaseModel):
-	val = CharField(unique=True, null=True)
+	val = CharField()
 
 class Path(BaseModel):
-	val = CharField(unique=True, null=True)
+	val = CharField()
 
 class Params(BaseModel):
-	val = CharField(unique=True, null=True)
+	val = CharField()
 
 class Query(BaseModel):
-	val = CharField(unique=True, null=True)
+	val = CharField()
 
 class Fragment(BaseModel):
-	val = CharField(unique=True, null=True)
+	val = CharField()
 
 class URL(BaseModel):
-	# record = ForeignKeyField(Record, primary_key=True)
+	# want to search without fkrecord, so can't be Record<URL
 	scheme = ForeignKeyField(Scheme)
 	netloc = ForeignKeyField(Netloc)
 	path = ForeignKeyField(Path)
@@ -46,11 +46,10 @@ class URL(BaseModel):
 
 ### RECORD
 class Record(BaseModel):
-	url = ForeignKeyField(URL, primary_key=True)
-	site = ForeignKeyField(Site, backref='urls')
+	url = ForeignKeyField(URL, backref='urls', primary_key=True)
+	site = ForeignKeyField(Site, backref='records')
 	date = DateTimeField()
 	screenshot = CharField(null=True)
-
 
 class Title(BaseModel):
 	"""
@@ -74,20 +73,23 @@ class MetaData(BaseModel):
 	val = CharField()
 
 ### BLOCK
+class BlockLabel(BaseModel):
+	# unclassified, title, price, sale_price, rating, summary, description, main image
+	label = CharField(unique=True)
+
 class BlockType(BaseModel):
-	# unclassified, title, price, sale_price, rating, summary, description
-	typ_ = CharField(unique=True)
+	typ = CharField(unique=True)
 
 class Block(BaseModel):
 	record = ForeignKeyField(Record, backref='blocks')
-	block_type = ForeignKeyField(BlockType, null=True)
+	block_label = ForeignKeyField(BlockLabel, default='unclassified')
+	block_type = ForeignKeyField(BlockType)
 	label = CharField(null=True)
 	scroll_left = CharField(null=True)
 	scroll_top = CharField(null=True)
 	html = TextField(null=True)
 	text = TextField(null=True)
 	src = CharField(null=True)
-
 
 class CSSParam(BaseModel):
 	name = CharField(unique=True)
@@ -97,14 +99,12 @@ class Computed(BaseModel):
 	param = ForeignKeyField(CSSParam, backref='computed')
 	value = CharField()
 
-
 class Bound(BaseModel):
 	block = ForeignKeyField(Block, primary_key=True, backref='bound')
 	bound_top = IntegerField()
 	bound_left = IntegerField()
 	bound_width = IntegerField()
 	bound_height = IntegerField()
-
 
 class ElementID(BaseModel):
 	name = CharField(unique=True)
@@ -120,7 +120,6 @@ class Element(BaseModel):
 class ElemClass(BaseModel):
 	elements = ManyToManyField(Element, backref='element_classes')
 	name = CharField(unique=True)
-
 
 class Tag(BaseModel):
 	name = CharField(unique=True)

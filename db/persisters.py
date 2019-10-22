@@ -25,6 +25,7 @@ def create_tables():
         database.create_tables([Site, Record,
             Scheme, Netloc, Path, Params, Query, Fragment, URL,
             Title, Link, MetaData, MetaDataType,
+            Block, 
             ])
             # URL, Record, Block, #Blocks,
             # CSSParam, Computed, Bound,
@@ -44,21 +45,19 @@ class TopLevel():
         self.site = site
         self.parsed_url = urlparse(url)
         self.screenshot = screenshot
-
         self.meta_data = extract['meta_tags']
-        self.links = extract['links']
-        self.titles = extract['titles']
 
         texts_images = (
             [('text', text) for text in extract['texts']] + 
             [('image', image) for image in extract['images']])
-
         sorted_texts_images = sorted(
             texts_images, key=lambda i: (
                 i[1]['bound']['top'], i[1]['bound']['left']))
-
         self.blocks = (
             [('body', extract['body'])] + sorted_texts_images)
+
+        self.links = extract['links']
+        self.titles = extract['titles']
 
     # def get_or_create(self, object_type, **kwargs):
     #     # site, _ = self.get_or_create(Site, name=self.site)
@@ -112,8 +111,8 @@ class TopLevel():
                 fragment=q_fragment_val,
                 ).execute()
 
-        q_record_url = Record.select().where(Record.url==q_url)
-        if not q_record_url.exists():
+        q_record = Record.select().where(Record.url==q_url)
+        if not q_record.exists():
             Record.insert(
                 url=q_url,
                 site=site,
@@ -122,24 +121,13 @@ class TopLevel():
 
         for title in self.titles:
             q_title = Title.select().where(
-                Title.record==q_record_url,
+                Title.record==q_record,
                 Title.title==title)
             if not q_title.exists():
                 Title.insert(
-                    record=q_record_url,
+                    record=q_record,
                     title=title
                     ).execute()
-
-        # TODO before adding links, clean the links, then bulk add them
-        # for link in self.links:
-        #     q_link = Link.select().where(
-        #         Link.record==q_record_url,
-        #         Link.link==link)
-        #     if not q_link.exists():
-        #         Link.insert(
-        #             record=q_record_url,
-        #             link=link
-        #             ).execute()
 
         for meta_key, meta_val in self.meta_data.items():
             if meta_key not in ('msapplication-TileColor',): # TODO add more exclusions
@@ -149,28 +137,57 @@ class TopLevel():
                     MetaDataType.insert(name=meta_key).execute()
 
                 q_metadata = MetaData.select().where(
-                    MetaData.record==q_record_url,
+                    MetaData.record==q_record,
                     MetaData.key==q_metadatatype,
                     MetaData.val==meta_val)
                 if not q_metadatatype.exists():
                     MetaData.insert(
-                        record=q_record_url,
+                        record=q_record,
                         key=meta_key,
                         val=meta_val)
 
-        d = {
-        'body':0,
-        'image':0,
-        'text':0,
-        }
         for block in self.blocks:
+
             block_type = block[0]
             block_data = block[1]
-            d[block_type]+=1
-        
-            if block_type == "text"
-            elif "image"
-            else
+
+            if block_type == 'text':
+                block_id = Block.insert(
+                    record=q_record,
+                    block_type=block_type,
+                    html=block_data['html'],
+                    text=block_data['text'],
+                    ).execute()
+            elif block_type == 'image':
+                qblock_id = Block.insert(
+                    record=q_record,
+                    block_type=block_type,
+                    src=block_data['src'],
+                    ).execute()
+            else:
+                block_id = Block.insert(
+                    record=q_record,
+                    block_type=block_type,
+                    scroll_left=block_data['bound']['left'],
+                    scroll_top=block_data['bound']['top'],
+                    ).execute()
+
+            computed = block_data['computed']
+            
+            for k, v in computed.items():
+                if v[0].isdigit():
+                    if '%' in v:
+                        print(v)
+                        v = int(''.join([i for i in v if i.isdigit() or i=='.']))/100
+                        print(v)
+                    elif '.' in v:
+                        v = float(''.join([i for i in v if i.isdigit() or i=='.']))
+                    else:
+                        v = int(''.join([i for i in v if i.isdigit()]))
+
+            break
+
+
 
 
 if __name__ == '__main__':
