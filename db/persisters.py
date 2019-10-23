@@ -25,7 +25,8 @@ def create_tables():
         database.create_tables([Site, Record,
             Scheme, Netloc, Path, Params, Query, Fragment, URL,
             Title, Link, MetaData, MetaDataType,
-            Block, 
+            Block,
+            CSSParam, Computed,
             ])
             # URL, Record, Block, #Blocks,
             # CSSParam, Computed, Bound,
@@ -159,7 +160,7 @@ class TopLevel():
                     text=block_data['text'],
                     ).execute()
             elif block_type == 'image':
-                qblock_id = Block.insert(
+                block_id = Block.insert(
                     record=q_record,
                     block_type=block_type,
                     src=block_data['src'],
@@ -172,18 +173,52 @@ class TopLevel():
                     scroll_top=block_data['bound']['top'],
                     ).execute()
 
+            block = Block.get_by_id(block_id)
+
             computed = block_data['computed']
             
-            for k, v in computed.items():
-                if v[0].isdigit():
-                    if '%' in v:
-                        print(v)
-                        v = int(''.join([i for i in v if i.isdigit() or i=='.']))/100
-                        print(v)
-                    elif '.' in v:
-                        v = float(''.join([i for i in v if i.isdigit() or i=='.']))
+            for key, val in computed.items():
+
+                if not 'rgb' in val:
+                    if ' ' in val:
+                        val = val.split(' ')
+                        for i in val:
+                            if i[0].isdigit():
+                                if '.' in i:
+                                    val = float(''.join([x for x in i if x.isdigit() or x=='.']))
+                                else:
+                                    val = int(''.join([x for x in i if x.isdigit()]))
                     else:
-                        v = int(''.join([i for i in v if i.isdigit()]))
+                        if val[0].isdigit():
+                            if '.' in val:
+                                val = float(''.join([x for x in val if x.isdigit() or x=='.']))
+                            else:
+                                val = int(''.join([x for x in val if x.isdigit()]))
+                print(key, val)
+
+
+                # q_cssparam = CSSParam.select().where(
+                #     CSSParam.key==key)
+                # if not q_cssparam.exists():
+                #     CSSParam.insert(key=key).execute()
+
+                # if val[0].isdigit():# or all(val[0] == '-' and val[1].isdigit()):
+                #     if '.' in val and ' ' not in val:
+                #         val = float(''.join([i for i in val if i.isdigit() or i=='.']))
+                #     else:
+                #         val = int(''.join([i for i in val if i.isdigit()]))
+
+                #     Computed.insert(
+                #         block=block,
+                #         param=q_cssparam,
+                #         cont_val=val
+                #         ).execute()
+                # else:
+                #     Computed.insert(
+                #         block=block,
+                #         param=q_cssparam,
+                #         cat_val=val
+                #         ).execute()
 
             break
 
