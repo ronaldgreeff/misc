@@ -91,14 +91,16 @@ class Block(BaseModel):
 	text = TextField(null=True)
 	src = CharField(null=True)
 
-class CSSParam(BaseModel):
+class CSSKey(BaseModel):
 	key = CharField(unique=True)
 
+class CSSVal(BaseModel):
+	val = CharField(unique=True)
+
 class Computed(BaseModel):
-	block = ForeignKeyField(Block, backref='computed')
-	param = ForeignKeyField(CSSParam, backref='computed')
-	cont_val = CharField(null=True) # TODO support float and int
-	cat_val = CharField(null=True)
+	block = ForeignKeyField(Block)
+	key = ForeignKeyField(CSSKey)
+	val = ForeignKeyField(CSSVal)
 
 class Bound(BaseModel):
 	block = ForeignKeyField(Block, primary_key=True, backref='bound')

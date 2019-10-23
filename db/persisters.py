@@ -26,10 +26,9 @@ def create_tables():
             Scheme, Netloc, Path, Params, Query, Fragment, URL,
             Title, Link, MetaData, MetaDataType,
             Block,
-            CSSParam, Computed,
+            CSSKey, CSSVal, Computed,
             ])
-            # URL, Record, Block, #Blocks,
-            # CSSParam, Computed, Bound,
+            # Bound,
             # ElementID, ElementName, Element,
             # ElemClass, Tag, Path,
             # SelectorID, SelectorName, Selector,
@@ -179,28 +178,27 @@ class TopLevel():
             
             for key, val in computed.items():
 
-                if not 'rgb' in val:
-                    if ' ' in val:
-                        val = val.split(' ')
-                        for i in val:
-                            if i[0].isdigit():
-                                if '.' in i:
-                                    val = float(''.join([x for x in i if x.isdigit() or x=='.']))
-                                else:
-                                    val = int(''.join([x for x in i if x.isdigit()]))
-                    else:
-                        if val[0].isdigit():
-                            if '.' in val:
-                                val = float(''.join([x for x in val if x.isdigit() or x=='.']))
-                            else:
-                                val = int(''.join([x for x in val if x.isdigit()]))
-                print(key, val)
+                q_csskey = CSSKey.select().where(
+                    CSSKey.key==key)
+                if not q_csskey.exists():
+                    CSSKey.insert(key=key).execute()
 
+                q_cssval = CSSVal.select().where(
+                    CSSVal.val==val)
+                if not q_cssval.exists():
+                    CSSVal.insert(val=val).execute()
 
-                # q_cssparam = CSSParam.select().where(
-                #     CSSParam.key==key)
-                # if not q_cssparam.exists():
-                #     CSSParam.insert(key=key).execute()
+                q_computed = Computed.select().where(
+                    Computed.block==block,
+                    Computed.key==q_csskey,
+                    Computed.val==q_cssval) # TODO most cssvals are categorical,
+                # few are px, % and muli-valued like 50% 50%, 0px 0px
+                # html use 4 vals, but need to know order
+                if not q_computed.exists():
+                    q_computed.execute()
+
+            bound = block_data['bound']
+            print(bound)
 
                 # if val[0].isdigit():# or all(val[0] == '-' and val[1].isdigit()):
                 #     if '.' in val and ' ' not in val:
@@ -210,13 +208,13 @@ class TopLevel():
 
                 #     Computed.insert(
                 #         block=block,
-                #         param=q_cssparam,
+                #         param=q_csskey,
                 #         cont_val=val
                 #         ).execute()
                 # else:
                 #     Computed.insert(
                 #         block=block,
-                #         param=q_cssparam,
+                #         param=q_csskey,
                 #         cat_val=val
                 #         ).execute()
 
