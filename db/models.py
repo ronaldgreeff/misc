@@ -109,6 +109,14 @@ class Bound(BaseModel):
 	bound_width = IntegerField()
 	bound_height = IntegerField()
 
+class Tag(BaseModel):
+	name = CharField(unique=True)
+
+class BlockPath(BaseModel):
+	tags = ManyToManyField(Tag, backref='paths')
+	block = ForeignKeyField(Block, backref='paths')
+
+
 class ElementID(BaseModel):
 	name = CharField(unique=True)
 
@@ -123,14 +131,6 @@ class Element(BaseModel):
 class ElemClass(BaseModel):
 	elements = ManyToManyField(Element, backref='element_classes')
 	name = CharField(unique=True)
-
-class Tag(BaseModel):
-	name = CharField(unique=True)
-
-# this Path needs a different name - different to existing path
-# class Path(BaseModel):
-# 	tag = ForeignKeyField(Tag, backref='paths')
-# 	block = ForeignKeyField(Block, backref='paths')
 
 
 class SelectorID(BaseModel):

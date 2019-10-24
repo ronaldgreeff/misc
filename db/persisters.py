@@ -27,20 +27,24 @@ def create_tables():
             Title, Link, MetaData, MetaDataType,
             Block,
             CSSKey, CSSVal, Computed,
+            Bound,
+            ElemClass, Tag, BlockPath,
+            BlockPath.tags.get_through_model(),
+            SelectorID, SelectorName, Selector,
+            SelecClass.selectors.get_through_model(),
             ])
-            # Bound,
             # ElementID, ElementName, Element,
-            # ElemClass, Tag, Path,
-            # SelectorID, SelectorName, Selector,
             # SelecClass, Link, Title, MetaDataType,
             # MetaData, ElemClass.elements.get_through_model(),
-            # SelecClass.selectors.get_through_model()])
     database.close()
 
 
 class TopLevel():
 
     def __init__(self, site, url, screenshot, extract):
+
+        # extract = ['body', 'images', 'links',
+        # 'meta_tags', 'texts', 'titles', 'url'])
 
         self.site = site
         self.parsed_url = urlparse(url)
@@ -59,16 +63,6 @@ class TopLevel():
         self.links = extract['links']
         self.titles = extract['titles']
 
-    # def get_or_create(self, object_type, **kwargs):
-    #     # site, _ = self.get_or_create(Site, name=self.site)
-    #     # `username` is a TODO***unique*** column,
-    #     # so this username already exists,
-    #     # making it safe to call .get().
-    #     try:
-    #         db_obj = object_type.create(**kwargs)
-    #         return db_obj, True
-    #     except peewee.IntegrityError:
-    #         return object_type.get(**kwargs), False
 
         q_site_name = Site.select().where(Site.name==self.site)
         if not q_site_name.exists():
@@ -146,7 +140,8 @@ class TopLevel():
                         key=meta_key,
                         val=meta_val)
 
-        for block in self.blocks:
+        d = {}
+        for block in self.blocks: # TODO add if not exists
 
             block_type = block[0]
             block_data = block[1]
@@ -165,6 +160,7 @@ class TopLevel():
                     src=block_data['src'],
                     ).execute()
             else:
+                print('block_type {}'.format(block_type))
                 block_id = Block.insert(
                     record=q_record,
                     block_type=block_type,
@@ -197,30 +193,41 @@ class TopLevel():
                 if not q_computed.exists():
                     q_computed.execute()
 
-            bound = block_data['bound']
-            print(bound)
+            path = block_data.get('path')
+            if path:
 
-                # if val[0].isdigit():# or all(val[0] == '-' and val[1].isdigit()):
-                #     if '.' in val and ' ' not in val:
-                #         val = float(''.join([i for i in val if i.isdigit() or i=='.']))
-                #     else:
-                #         val = int(''.join([i for i in val if i.isdigit()]))
+                q_block_path = BlockPath.select().where(
+                    BlockPath.block==block)
+                if not q_block_path.exists():
+                    block_path_id = BlockPath.insert(
+                        block=block
+                        ).execute()
 
-                #     Computed.insert(
-                #         block=block,
-                #         param=q_csskey,
-                #         cont_val=val
-                #         ).execute()
-                # else:
-                #     Computed.insert(
-                #         block=block,
-                #         param=q_csskey,
-                #         cat_val=val
-                #         ).execute()
+                block_path = BlockPath.get_by_id(block_path_id)
 
-            break
+                for tag in path:
+                    q_tag = Tag.select().where(Tag.name==tag)
+                    if not q_tag.exists():
+                        Tag.insert(name=tag).execute()
+
+                    print('{} {}'.format(block_path_id, tag))
+                    block_path.tags.add(q_tag)
+        
+            selector = block_data.get('selector')
+            if selector:
+                pass
 
 
+
+
+
+        # {'div': 1764, 'a': 141, 'h3': 5, 'p': 62,
+        # 'ul': 38, 'li': 38, 'img': 48, 'form': 4,
+        # 'span': 2, 'section': 57, 'h2': 30,
+        # 'button': 7, 'label': 1, 'h4': 1}
+
+            # selector=block_data.get('selector')
+            # scroll=block_data.get('scroll')
 
 
 if __name__ == '__main__':
