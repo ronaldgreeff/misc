@@ -95,7 +95,7 @@ class CSSKey(BaseModel):
 	key = CharField(unique=True)
 
 class CSSVal(BaseModel):
-	val = CharField(unique=True)
+	val = CharField()
 
 class Computed(BaseModel):
 	block = ForeignKeyField(Block)
@@ -110,12 +110,12 @@ class Bound(BaseModel):
 	bound_height = IntegerField()
 
 class Tag(BaseModel):
-	name = CharField(unique=True)
+	name = CharField()
 
 class BlockPath(BaseModel):
-	tags = ManyToManyField(Tag, backref='paths')
-	block = ForeignKeyField(Block, backref='paths')
-
+	block = ForeignKeyField(Block, primary_key=True,
+		backref='path')
+	tags = ManyToManyField(Tag, backref='path',)
 
 class ElementID(BaseModel):
 	name = CharField(unique=True)

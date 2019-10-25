@@ -2,7 +2,7 @@
 from datetime import datetime
 import peewee
 from peewee import *
-import pickle
+import pickle, json
 import sys
 import os
 from urllib.parse import urlparse
@@ -113,109 +113,151 @@ class TopLevel():
                 date=datetime.now(),
                 screenshot=self.screenshot).execute()
 
-        for title in self.titles:
-            q_title = Title.select().where(
-                Title.record==q_record,
-                Title.title==title)
-            if not q_title.exists():
-                Title.insert(
-                    record=q_record,
-                    title=title
-                    ).execute()
+        for record in q_record:
 
-        for meta_key, meta_val in self.meta_data.items():
-            if meta_key not in ('msapplication-TileColor',): # TODO add more exclusions
-                
-                q_metadatatype = MetaDataType.select().where(MetaDataType.name==meta_key)
-                if not q_metadatatype.exists():
-                    MetaDataType.insert(name=meta_key).execute()
+            for title in self.titles:
+                q_title = Title.select().where(
+                    Title.record==record,
+                    Title.title==title)
+                if not q_title.exists():
+                    Title.insert(
+                        record=record,
+                        title=title
+                        ).execute()
+
+            for meta_key, meta_val in self.meta_data.items():
+                if meta_key not in ('msapplication-TileColor',): # TODO add more exclusions
+                    q_metadatatype = MetaDataType.select().where(MetaDataType.name==meta_key)
+                    if not q_metadatatype.exists():
+                        MetaDataType.insert(name=meta_key).execute()
 
                 q_metadata = MetaData.select().where(
-                    MetaData.record==q_record,
+                    MetaData.record==record,
                     MetaData.key==q_metadatatype,
                     MetaData.val==meta_val)
                 if not q_metadatatype.exists():
                     MetaData.insert(
-                        record=q_record,
+                        record=record,
                         key=meta_key,
                         val=meta_val)
 
-        d = {}
-        for block in self.blocks: # TODO add if not exists
+            for c, block in enumerate(self.blocks):
 
-            block_type = block[0]
-            block_data = block[1]
+                block_type = block[0]
+                block_data = block[1]
 
-            if block_type == 'text':
-                block_id = Block.insert(
-                    record=q_record,
-                    block_type=block_type,
-                    html=block_data['html'],
-                    text=block_data['text'],
-                    ).execute()
-            elif block_type == 'image':
-                block_id = Block.insert(
-                    record=q_record,
-                    block_type=block_type,
-                    src=block_data['src'],
-                    ).execute()
-            else:
-                print('block_type {}'.format(block_type))
-                block_id = Block.insert(
-                    record=q_record,
-                    block_type=block_type,
-                    scroll_left=block_data['bound']['left'],
-                    scroll_top=block_data['bound']['top'],
-                    ).execute()
+                if block_type == 'text':
 
-            block = Block.get_by_id(block_id)
+                    text = json.dumps(block_data['text'])
 
-            computed = block_data['computed']
-            
-            for key, val in computed.items():
-
-                q_csskey = CSSKey.select().where(
-                    CSSKey.key==key)
-                if not q_csskey.exists():
-                    CSSKey.insert(key=key).execute()
-
-                q_cssval = CSSVal.select().where(
-                    CSSVal.val==val)
-                if not q_cssval.exists():
-                    CSSVal.insert(val=val).execute()
-
-                q_computed = Computed.select().where(
-                    Computed.block==block,
-                    Computed.key==q_csskey,
-                    Computed.val==q_cssval) # TODO most cssvals are categorical,
-                # few are px, % and muli-valued like 50% 50%, 0px 0px
-                # html use 4 vals, but need to know order
-                if not q_computed.exists():
-                    q_computed.execute()
-
-            path = block_data.get('path')
-            if path:
-
-                q_block_path = BlockPath.select().where(
-                    BlockPath.block==block)
-                if not q_block_path.exists():
-                    block_path_id = BlockPath.insert(
-                        block=block
+                    q_block = Block.select().where(
+                        Block.record==record,
+                        Block.block_type==block_type,
+                        Block.html==block_data['html'],
+                        Block.text==text,
+                        )
+                    # print(c, q_block.exists())
+                    # if not q_block:
+                    block_id = Block.insert(
+                        record=record,
+                        block_type=block_type,
+                        html=block_data['html'],
+                        text=text,
+                        ).execute()
+                elif block_type == 'image':
+                    q_block = Block.select().where(
+                        Block.record==record,
+                        Block.block_type==block_type,
+                        Block.src==block_data['src'],
+                        )
+                    # print(c, q_block.exists())
+                    # if not q_block:
+                    block_id = Block.insert(
+                        record=record,
+                        block_type=block_type,
+                        src=block_data['src'],
+                        ).execute()
+                else:
+                    q_block = Block.select().where(
+                        Block.record==record,
+                        Block.block_type==block_type,
+                        Block.scroll_left==block_data['bound']['left'],
+                        Block.scroll_top==block_data['bound']['top'],
+                        )
+                    # print(c, q_block.exists())
+                    # if not q_block:
+                    block_id = Block.insert(
+                        record=record,
+                        block_type=block_type,
+                        scroll_left=block_data['bound']['left'],
+                        scroll_top=block_data['bound']['top'],
                         ).execute()
 
-                block_path = BlockPath.get_by_id(block_path_id)
+                block = Block.get(block_id)
 
-                for tag in path:
-                    q_tag = Tag.select().where(Tag.name==tag)
-                    if not q_tag.exists():
-                        Tag.insert(name=tag).execute()
+                computed = block_data['computed']
+                
+                for key, val in computed.items():
 
-                    print('{} {}'.format(block_path_id, tag))
-                    block_path.tags.add(q_tag)
-        
-            selector = block_data.get('selector')
-            if selector:
-                pass
+                    q_csskey = CSSKey.select().where(
+                        CSSKey.key==key)
+                    if not q_csskey.exists():
+                        CSSKey.insert(key=key).execute()
+
+                    css_key = CSSKey.get(q_csskey)
+
+                    # TODO
+                    # for discrete features, get val
+                    # for continuous features, create val
+                    q_cssval = CSSVal.select().where(
+                        CSSVal.val==val)
+                    if not q_cssval.exists():
+                        CSSVal.insert(val=val).execute()
+                    css_val = CSSVal.get(q_cssval)
+
+                    # q_computed = Computed.select().where(
+                    #     Computed.block==block,
+                    #     Computed.key==q_csskey,
+                    #     Computed.val==q_cssval) # TODO most cssvals are categorical,
+                    # few are px, % and muli-valued like 50% 50%, 0px 0px
+                    # html use 4 vals, but need to know order
+                    # if not q_computed.exists():
+                    #     q_computed.execute()
+                    computed = Computed.get(Computed.insert(
+                        block=block,
+                        key=css_key,
+                        val=css_val
+                        ).execute())
+                    break
+
+                # print(c, True if block_data.get('path') else False)
+
+                # path = block_data.get('path')
+                # if path:
+
+                #     q_block_path = BlockPath.select().where(
+                #         BlockPath.block==block)
+                    # print(c, q_block_path.exists(), path)
+                    # if not q_block_path.exists():
+                    #     block_path_id = BlockPath.insert(
+                    #         block=block
+                    #         ).execute()
+
+                    # x = q_block_path.execute()
+                    # print([i for i in x])
+
+                # for tag in path:
+                #     q_tag = Tag.select().where(Tag.name==tag)
+                #     if not q_tag.exists():
+                #         Tag.insert(name=tag).execute()
+
+                #     tag = q_tag.execute()
+
+                #     q_block_path.tags.add(q_tag)
+
+            # selector = block_data.get('selector')
+            # if selector:
+            #     pass
 
 
 
