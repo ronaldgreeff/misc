@@ -5,7 +5,7 @@ from peewee import *
 import pickle, json
 import sys
 import os
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urlunparse
 
 from models import *
 
@@ -23,32 +23,24 @@ def create_tables():
     database.connect()
     with database:
         database.create_tables([Site, Record,
-            Scheme, Netloc, Path, Params, Query, Fragment, URL,
-            Title, Link, MetaData, MetaDataType,
+            Title, MetaKey, MetaData,
             Block,
             CSSKey, CSSVal, Computed,
             Bound,
-            ElemClass, Tag, BlockPath,
-            BlockPath.tags.get_through_model(),
-            SelectorID, SelectorName, Selector,
-            SelecClass.selectors.get_through_model(),
+            SelectClass, BlockClass, SelectId, BlockId, SelectTag, BlockTag,
             ])
-            # ElementID, ElementName, Element,
-            # SelecClass, Link, Title, MetaDataType,
-            # MetaData, ElemClass.elements.get_through_model(),
     database.close()
 
 
 class TopLevel():
 
-    def __init__(self, site, url, screenshot, extract):
+    def __init__(self, url, screenshot, extract):
+
+        self.parsed_url = urlparse(url)
+        self.screenshot = screenshot
 
         # extract = ['body', 'images', 'links',
         # 'meta_tags', 'texts', 'titles', 'url'])
-
-        self.site = site
-        self.parsed_url = urlparse(url)
-        self.screenshot = screenshot
         self.meta_data = extract['meta_tags']
 
         texts_images = (
@@ -63,216 +55,145 @@ class TopLevel():
         self.links = extract['links']
         self.titles = extract['titles']
 
+    def store(self):
 
-        q_site_name = Site.select().where(Site.name==self.site)
-        if not q_site_name.exists():
-            Site.insert(name=self.site).execute()
+        try:
+            site_obj = Site.create(netloc=self.parsed_url[1])
+        except IntegrityError:
+            site_obj = Site.get(netloc=self.parsed_url[1])
 
-        q_scheme_val = Scheme.select().where(Scheme.val==self.parsed_url[0])
-        if not q_scheme_val.exists():
-            Scheme.insert(val=self.parsed_url[0]).execute()
-        q_netloc_val = Netloc.select().where(Netloc.val==self.parsed_url[1])
-        if not q_netloc_val.exists():
-            Netloc.insert(val=self.parsed_url[1]).execute()
-        q_path_val = Path.select().where(Path.val==self.parsed_url[2])
-        if not q_path_val.exists():
-            Path.insert(val=self.parsed_url[2]).execute()
-        q_params_val = Params.select().where(Params.val==self.parsed_url[3])
-        if not q_params_val.exists():
-            Params.insert(val=self.parsed_url[3]).execute()
-        q_query_val = Query.select().where(Query.val==self.parsed_url[4])
-        if not q_query_val.exists():
-            Query.insert(val=self.parsed_url[4]).execute()
-        q_fragment_val = Fragment.select().where(Fragment.val==self.parsed_url[5])
-        if not q_fragment_val.exists():
-            Fragment.insert(val=self.parsed_url[5]).execute()
+        try:
+            record_obj = Record.create(
+                site=site_obj,
+                url=urlunparse(self.parsed_url),
+                screenshot=self.screenshot)
+        except IntegrityError:
+            record_obj = Record.get(url=urlunparse(self.parsed_url))
 
-        q_url = URL.select().where(
-            URL.scheme==q_scheme_val,
-            URL.netloc==q_netloc_val,
-            URL.path==q_path_val,
-            URL.params==q_params_val,
-            URL.query==q_query_val,
-            URL.fragment==q_fragment_val,
-            )
-        if not q_url.exists():
-            URL.insert(
-                scheme=q_scheme_val,
-                netloc=q_netloc_val,
-                path=q_path_val,
-                params=q_params_val,
-                query=q_query_val,
-                fragment=q_fragment_val,
-                ).execute()
+        for title in self.titles:
+            try:
+                Title.create(
+                    record=record_obj,
+                    title=title)
+            except IntegrityError as e:
+                print('{} for {}'.format(e, title))
 
-        q_record = Record.select().where(Record.url==q_url)
-        if not q_record.exists():
-            Record.insert(
-                url=q_url,
-                site=site,
-                date=datetime.now(),
-                screenshot=self.screenshot).execute()
+        for meta_key, meta_val in self.meta_data.items():
+            try:
+                mk_obj = MetaKey.create(name=meta_key)
+            except IntegrityError:
+                mk_obj = MetaKey.get(name=meta_key)
 
-        for record in q_record:
+            MetaData.create(
+                record=record_obj,
+                key=mk_obj,
+                val=meta_val)
 
-            for title in self.titles:
-                q_title = Title.select().where(
-                    Title.record==record,
-                    Title.title==title)
-                if not q_title.exists():
-                    Title.insert(
-                        record=record,
-                        title=title
-                        ).execute()
+        for block in self.blocks:
 
-            for meta_key, meta_val in self.meta_data.items():
-                if meta_key not in ('msapplication-TileColor',): # TODO add more exclusions
-                    q_metadatatype = MetaDataType.select().where(MetaDataType.name==meta_key)
-                    if not q_metadatatype.exists():
-                        MetaDataType.insert(name=meta_key).execute()
+            block_type = block[0]
+            block_data = block[1]
+            # block_data:
+            # ['bound', 'computed', 'scroll']
+            # ['bound', 'computed', 'element',        'path', 'selector', 'src']
+            # ['bound', 'computed', 'element', 'html', 'path', 'selector', 'text']
 
-                q_metadata = MetaData.select().where(
-                    MetaData.record==record,
-                    MetaData.key==q_metadatatype,
-                    MetaData.val==meta_val)
-                if not q_metadatatype.exists():
-                    MetaData.insert(
-                        record=record,
-                        key=meta_key,
-                        val=meta_val)
+            if block_type == 'text':
+                text = json.dumps(block_data['text']) # json.dumps(a list)
+                block_obj = Block.create(
+                    record=record_obj,
+                    block_type=block_type,
+                    html=block_data['html'],
+                    text=text)
+            elif block_type == 'image':
+                block_obj = Block.create(
+                    record=record_obj,
+                    block_type=block_type,
+                    src=block_data['src'])
+            else: # body
+                block_obj = Block.create(
+                    record=record_obj,
+                    block_type=block_type,
+                    scroll_left=block_data['bound']['left'],
+                    scroll_top=block_data['bound']['top'])
 
-            for c, block in enumerate(self.blocks):
+            computed = block_data['computed']
+            
+            for key, val in computed.items():
+                try:
+                    key_obj = CSSKey.create(key=key)
+                except IntegrityError:
+                    key_obj = CSSKey.get(key=key)
+                try:
+                    val_obj = CSSVal.create(val=val)
+                except IntegrityError:
+                    val_obj = CSSVal.get(val=val)
 
-                block_type = block[0]
-                block_data = block[1]
+                computed_obj = Computed.create(
+                    block=block_obj, key=key_obj, val=val_obj)
 
-                if block_type == 'text':
+                # TODO
+                # for discrete features, get val
+                # for continuous features, create val
 
-                    text = json.dumps(block_data['text'])
+            bound = block_data['bound']
 
-                    q_block = Block.select().where(
-                        Block.record==record,
-                        Block.block_type==block_type,
-                        Block.html==block_data['html'],
-                        Block.text==text,
-                        )
-                    # print(c, q_block.exists())
-                    # if not q_block:
-                    block_id = Block.insert(
-                        record=record,
-                        block_type=block_type,
-                        html=block_data['html'],
-                        text=text,
-                        ).execute()
-                elif block_type == 'image':
-                    q_block = Block.select().where(
-                        Block.record==record,
-                        Block.block_type==block_type,
-                        Block.src==block_data['src'],
-                        )
-                    # print(c, q_block.exists())
-                    # if not q_block:
-                    block_id = Block.insert(
-                        record=record,
-                        block_type=block_type,
-                        src=block_data['src'],
-                        ).execute()
-                else:
-                    q_block = Block.select().where(
-                        Block.record==record,
-                        Block.block_type==block_type,
-                        Block.scroll_left==block_data['bound']['left'],
-                        Block.scroll_top==block_data['bound']['top'],
-                        )
-                    # print(c, q_block.exists())
-                    # if not q_block:
-                    block_id = Block.insert(
-                        record=record,
-                        block_type=block_type,
-                        scroll_left=block_data['bound']['left'],
-                        scroll_top=block_data['bound']['top'],
-                        ).execute()
+            Bound.create(
+                block=block_obj,
+                top=float(bound['top']),
+                left=float(bound['left']),
+                width=float(bound['width']),
+                height=float(bound['height']))
 
-                block = Block.get(block_id)
+            selector = block_data.get('selector')
+            if selector:
+                for s in selector:
 
-                computed = block_data['computed']
-                
-                for key, val in computed.items():
+                    classes = s['classes']
+                    if classes:
+                        for c in classes:
+                            try:
+                                select_class = SelectClass.create(val=c)
+                            except IntegrityError:
+                                pass
+                            try:
+                                BlockClass.create(
+                                    block=block_obj,
+                                    val=select_class)
+                            except IntegrityError as e:
+                                print('{} {} with {}'.format(block_obj, c, e))
 
-                    q_csskey = CSSKey.select().where(
-                        CSSKey.key==key)
-                    if not q_csskey.exists():
-                        CSSKey.insert(key=key).execute()
+                    i = s['id']
+                    if i:
+                        try:
+                            select_id = SelectId.create(val=i)
+                        except IntegrityError:
+                            pass
+                        try:
+                            BlockId.create(
+                                block=block_obj,
+                                val=select_id)
+                        except IntegrityError as e:
+                            print('{} {} with {}'.format(block_obj, i, e))
 
-                    css_key = CSSKey.get(q_csskey)
+                    t = s['name']
+                    if t:
+                        try:
+                            select_tag = SelectTag.create(val=t)
+                        except IntegrityError:
+                            select_tag = SelectTag.get(val=t)
 
-                    # TODO
-                    # for discrete features, get val
-                    # for continuous features, create val
-                    q_cssval = CSSVal.select().where(
-                        CSSVal.val==val)
-                    if not q_cssval.exists():
-                        CSSVal.insert(val=val).execute()
-                    css_val = CSSVal.get(q_cssval)
+                        BlockTag.create(
+                            block=block_obj,
+                            val=t)
 
-                    # q_computed = Computed.select().where(
-                    #     Computed.block==block,
-                    #     Computed.key==q_csskey,
-                    #     Computed.val==q_cssval) # TODO most cssvals are categorical,
-                    # few are px, % and muli-valued like 50% 50%, 0px 0px
-                    # html use 4 vals, but need to know order
-                    # if not q_computed.exists():
-                    #     q_computed.execute()
-                    computed = Computed.get(Computed.insert(
-                        block=block,
-                        key=css_key,
-                        val=css_val
-                        ).execute())
-                    break
-
-                # print(c, True if block_data.get('path') else False)
-
-                # path = block_data.get('path')
-                # if path:
-
-                #     q_block_path = BlockPath.select().where(
-                #         BlockPath.block==block)
-                    # print(c, q_block_path.exists(), path)
-                    # if not q_block_path.exists():
-                    #     block_path_id = BlockPath.insert(
-                    #         block=block
-                    #         ).execute()
-
-                    # x = q_block_path.execute()
-                    # print([i for i in x])
-
-                # for tag in path:
-                #     q_tag = Tag.select().where(Tag.name==tag)
-                #     if not q_tag.exists():
-                #         Tag.insert(name=tag).execute()
-
-                #     tag = q_tag.execute()
-
-                #     q_block_path.tags.add(q_tag)
-
-            # selector = block_data.get('selector')
-            # if selector:
-            #     pass
-
-
-
-
-
-        # {'div': 1764, 'a': 141, 'h3': 5, 'p': 62,
-        # 'ul': 38, 'li': 38, 'img': 48, 'form': 4,
-        # 'span': 2, 'section': 57, 'h2': 30,
-        # 'button': 7, 'label': 1, 'h4': 1}
-
-            # selector=block_data.get('selector')
-            # scroll=block_data.get('scroll')
 
 
 if __name__ == '__main__':
+
+    x = input('rm db y/n ?')
+    if x == 'y':
+        os.remove(os.path.join(os.getcwd(), 'extracts.db'))
 
     create_tables()
 
@@ -281,7 +202,7 @@ if __name__ == '__main__':
 
     r = TopLevel(
             url='https://www.boots.com/',
-            site='boots',
             screenshot='_test__boots.png',
             extract=extract()
         )
+    r.store()
