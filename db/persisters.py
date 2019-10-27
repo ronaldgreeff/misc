@@ -118,19 +118,27 @@ class TopLevel():
                     scroll_top=block_data['bound']['top'])
 
             computed = block_data['computed']
+
+            for k,v in computed.items():
+                if ' ' in v and 'rgb' not in v:
+                    print('{}: {}'.format(k, v))
             
             for key, val in computed.items():
                 try:
                     key_obj = CSSKey.create(key=key)
                 except IntegrityError:
                     key_obj = CSSKey.get(key=key)
+
+                # if CSSVal is discrete:
                 try:
                     val_obj = CSSVal.create(val=val)
                 except IntegrityError:
                     val_obj = CSSVal.get(val=val)
 
                 computed_obj = Computed.create(
-                    block=block_obj, key=key_obj, val=val_obj)
+                    block=block_obj, key=key_obj, val=val_obj,
+                    # cont_val=cont_val if cont_val else 0.0
+                    )
 
                 # TODO
                 # for discrete features, get val
@@ -158,7 +166,7 @@ class TopLevel():
                             try:
                                 select_class = SelectClass.create(val=c)
                             except IntegrityError:
-                                pass
+                                select_class = SelectClass.get(val=c)
                             try:
                                 BlockClass.create(
                                     block=block_obj,
@@ -171,7 +179,7 @@ class TopLevel():
                         try:
                             select_id = SelectId.create(val=i)
                         except IntegrityError:
-                            pass
+                            select_id = SelectId.get(val=i)
                         try:
                             BlockId.create(
                                 block=block_obj,
