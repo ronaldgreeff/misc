@@ -25,7 +25,7 @@ def create_tables():
         database.create_tables([Site, Record,
             Title, MetaKey, MetaData,
             Block,
-            CSSKey, CSSVal, Computed,
+            CSSKey, Computed,
             Bound,
             SelectClass, BlockClass, SelectId, BlockId, SelectTag, BlockTag,
             ])
@@ -89,14 +89,14 @@ class TopLevel():
                 key=mk_obj,
                 val=meta_val)
 
+
+        # keys = set()
+        # values = set()
+
         for block in self.blocks:
 
             block_type = block[0]
             block_data = block[1]
-            # block_data:
-            # ['bound', 'computed', 'scroll']
-            # ['bound', 'computed', 'element',        'path', 'selector', 'src']
-            # ['bound', 'computed', 'element', 'html', 'path', 'selector', 'text']
 
             if block_type == 'text':
                 text = json.dumps(block_data['text']) # json.dumps(a list)
@@ -119,92 +119,122 @@ class TopLevel():
 
             computed = block_data['computed']
 
-            for k,v in computed.items():
-                if ' ' in v and 'rgb' not in v:
-                    print('{}: {}'.format(k, v))
-            
             for key, val in computed.items():
+                # keys.add(key)
+                # values.add(val)
+
                 try:
                     key_obj = CSSKey.create(key=key)
                 except IntegrityError:
                     key_obj = CSSKey.get(key=key)
 
-                # if CSSVal is discrete:
-                try:
-                    val_obj = CSSVal.create(val=val)
-                except IntegrityError:
-                    val_obj = CSSVal.get(val=val)
-
-                computed_obj = Computed.create(
-                    block=block_obj, key=key_obj, val=val_obj,
-                    # cont_val=cont_val if cont_val else 0.0
-                    )
-
-                # TODO
-                # for discrete features, get val
-                # for continuous features, create val
-
-            # TODO
-            # block_data['scroll']
-
-            bound = block_data['bound']
-
-            Bound.create(
-                block=block_obj,
-                top=float(bound['top']),
-                left=float(bound['left']),
-                width=float(bound['width']),
-                height=float(bound['height']))
-
-            selector = block_data.get('selector')
-            if selector:
-                for s in selector:
-
-                    classes = s['classes']
-                    if classes:
-                        for c in classes:
-                            try:
-                                select_class = SelectClass.create(val=c)
-                            except IntegrityError:
-                                select_class = SelectClass.get(val=c)
-                            try:
-                                BlockClass.create(
-                                    block=block_obj,
-                                    val=select_class)
-                            except IntegrityError as e:
-                                print('{} {} with {}'.format(block_obj, c, e))
-
-                    i = s['id']
-                    if i:
-                        try:
-                            select_id = SelectId.create(val=i)
-                        except IntegrityError:
-                            select_id = SelectId.get(val=i)
-                        try:
-                            BlockId.create(
-                                block=block_obj,
-                                val=select_id)
-                        except IntegrityError as e:
-                            print('{} {} with {}'.format(block_obj, i, e))
-
-                    t = s['name']
-                    if t:
-                        try:
-                            select_tag = SelectTag.create(val=t)
-                        except IntegrityError:
-                            select_tag = SelectTag.get(val=t)
-
-                        BlockTag.create(
+                if any([(i in val) for i in ('px', '%')]) and 'rgb' not in val:
+                    if ' ' in val:
+                        cl = []
+                        for i in val.split(' '):
+                            if i[-2:] == 'px':
+                                cl.append(i[:-2])
+                            elif i[-1:] == '%':
+                                cl.append(i[:-1])
+                        Computed.create(block=block_obj, key=key_obj,
+                                cval_x=float(cl[0]), cval_y=float(cl[1]))
+                    elif val[-2:] == 'px':
+                        val=val[:-2]
+                        Computed.create(
                             block=block_obj,
-                            val=t)
+                            key=key_obj,
+                            continuous_val=float(val))
+                    elif val[-1:] == '%':
+                        val=val[:-1]
+                        Computed.create(
+                            block=block_obj,
+                            key=key_obj,
+                            continuous_val=float(val))
+                else:
+                    Computed.create(
+                        block=block_obj,
+                        key=key_obj,
+                        discrete_val=val)
+
+        # print('{}\n{}\n{}\n'.format(block_type, keys, values))
+
+            #     # if ' ' in val and 'rgb' not in val:
+            #     #     print('{} : {}'.format(key, val))
+
+            #     # if 'rgb' not in val:
+            #     #     if any([(i in val) for i in ('px', '%')]):
+            #     #         print('{} : {}'.format(key, val))
+
+            #     # if DiscreteVal is discrete:
+            #     # try:
+            #     #     val_obj = DiscreteVal.create(val=val)
+            #     # except IntegrityError:
+            #     #     val_obj = DiscreteVal.get(val=val)
+
+            #     computed_obj = Computed.create(
+            #         block=block_obj, key=key_obj, val=val_obj,
+            #         # cont_val=cont_val if cont_val else 0.0
+            #         )
+
+            # bound = block_data['bound']
+
+            # Bound.create(
+            #     block=block_obj,
+            #     top=float(bound['top']),
+            #     left=float(bound['left']),
+            #     width=float(bound['width']),
+            #     height=float(bound['height']))
+
+            # selector = block_data.get('selector')
+            # if selector:
+            #     for s in selector:
+
+            #         classes = s['classes']
+            #         if classes:
+            #             for c in classes:
+            #                 try:
+            #                     select_class = SelectClass.create(val=c)
+            #                 except IntegrityError:
+            #                     select_class = SelectClass.get(val=c)
+            #                 try:
+            #                     BlockClass.create(
+            #                         block=block_obj,
+            #                         val=select_class)
+            #                 except IntegrityError as e:
+            #                     print('{} {} with {}'.format(block_obj, c, e))
+
+            #         i = s['id']
+            #         if i:
+            #             try:
+            #                 select_id = SelectId.create(val=i)
+            #             except IntegrityError:
+            #                 select_id = SelectId.get(val=i)
+            #             try:
+            #                 BlockId.create(
+            #                     block=block_obj,
+            #                     val=select_id)
+            #             except IntegrityError as e:
+            #                 print('{} {} with {}'.format(block_obj, i, e))
+
+            #         t = s['name']
+            #         if t:
+            #             try:
+            #                 select_tag = SelectTag.create(val=t)
+            #             except IntegrityError:
+            #                 select_tag = SelectTag.get(val=t)
+
+            #             BlockTag.create(
+            #                 block=block_obj,
+            #                 val=t)
 
 
 
 if __name__ == '__main__':
 
+    fd = os.path.join(os.getcwd(), 'extracts.db')
     x = input('rm db y/n ?')
     if x == 'y':
-        os.remove(os.path.join(os.getcwd(), 'extracts.db'))
+        os.remove(fd)
 
     create_tables()
 
@@ -216,4 +246,11 @@ if __name__ == '__main__':
             screenshot='_test__boots.png',
             extract=extract()
         )
+
+    ts = datetime.now()
     r.store()
+    te = datetime.now()
+    # 'total': 823.182472   0
+    # 'total': 77.479282    1
+    # total: 57.561153
+    print('total: {}'.format((te-ts).total_seconds()))

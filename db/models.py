@@ -61,13 +61,13 @@ class Block(BaseModel):
 class CSSKey(BaseModel):
 	key = CharField(unique=True)
 
-class CSSVal(BaseModel):
-	val = CharField(unique=True)
-
 class Computed(BaseModel):
 	block = ForeignKeyField(Block)
 	key = ForeignKeyField(CSSKey)
-	val = ForeignKeyField(CSSVal)
+	discrete_val = CharField(null=True)
+	continuous_val = FloatField(null=True)
+	cval_x = FloatField(null=True)
+	cval_y = FloatField(null=True)
 
 class Bound(BaseModel):
 	block = ForeignKeyField(Block, primary_key=True, backref='bound')
