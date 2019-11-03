@@ -20,19 +20,28 @@ class Site(BaseModel):
 ### RECORD
 class Record(BaseModel):
 	site = ForeignKeyField(Site, backref='records')
-	url = CharField(unique=True, null=False) # extract['links'] go here
 	visited = BooleanField(default=False) # for extract['links']
-	screenshot = CharField(null=True)
+	label = CharField(null=True)
+	url = CharField(unique=True, null=False) # extract['links'] go here
 	created = DateTimeField(default=datetime.now())
 	updated = DateTimeField(default=datetime.now())
+	screenshot = CharField(null=True)
+
+class ProductDetail(BaseModel):
+	record = ForeignKeyField(Record, on_delete='CASCADE')
+	product_title = DeferredForeignKey('Block', null=True)
 	price = DeferredForeignKey('Block', null=True)
+	sale_price = DeferredForeignKey('Block', null=True)
+	overview = DeferredForeignKey('Block', null=True)
+	description = DeferredForeignKey('Block', null=True)
+	score = DeferredForeignKey('Block', null=True)
 
 class Title(BaseModel):
 	"""
 	Holds a list of titles (from page, twitter and fb)
 	found, NOT the title assigned to the record
 	"""
-	record = ForeignKeyField(Record, backref='titles')
+	record = ForeignKeyField(Record, on_delete='CASCADE', backref='titles')
 	title = CharField(null=True)
 
 	# http://docs.peewee-orm.com/en/latest/peewee/models.html#primary-keys-composite-keys-and-other-tricks
@@ -44,12 +53,12 @@ class MetaKey(BaseModel):
 	name = CharField()
 
 class MetaData(BaseModel):
-	record = ForeignKeyField(Record)
+	record = ForeignKeyField(Record, on_delete='CASCADE')
 	key = ForeignKeyField(MetaKey, backref='meta_data')
 	val = CharField()
 
 class Block(BaseModel):
-	record = ForeignKeyField(Record)
+	record = ForeignKeyField(Record, on_delete='CASCADE')
 	block_label = CharField(default='unclassified')
 	block_type = CharField(null=False)
 	scroll_left = CharField(null=True)
@@ -62,7 +71,7 @@ class CSSKey(BaseModel):
 	key = CharField(unique=True)
 
 class Computed(BaseModel):
-	block = ForeignKeyField(Block)
+	block = ForeignKeyField(Block, on_delete='CASCADE')
 	key = ForeignKeyField(CSSKey)
 	discrete_val = CharField(null=True)
 	continuous_val = FloatField(null=True)
@@ -70,7 +79,7 @@ class Computed(BaseModel):
 	cval_y = FloatField(null=True)
 
 class Bound(BaseModel):
-	block = ForeignKeyField(Block, primary_key=True, backref='bound')
+	block = ForeignKeyField(Block, on_delete='CASCADE', primary_key=True, backref='bound')
 	top = FloatField()
 	left = FloatField()
 	width = FloatField()
@@ -79,7 +88,7 @@ class Bound(BaseModel):
 class SelectClass(BaseModel):
 	val = CharField(unique=True)
 class BlockClass(BaseModel):
-	block = ForeignKeyField(Block)
+	block = ForeignKeyField(Block, on_delete='CASCADE')
 	val = ForeignKeyField(SelectClass)
 	class Meta:
 		primary_key = CompositeKey('block', 'val')
@@ -87,7 +96,7 @@ class BlockClass(BaseModel):
 class SelectId(BaseModel):
 	val = CharField(unique=True)
 class BlockId(BaseModel):
-	block = ForeignKeyField(Block)
+	block = ForeignKeyField(Block, on_delete='CASCADE')
 	val = ForeignKeyField(SelectId)
 	class Meta:
 		primary_key = CompositeKey('block', 'val')
@@ -95,5 +104,5 @@ class BlockId(BaseModel):
 class SelectTag(BaseModel):
 	val = CharField(unique=True)
 class BlockTag(BaseModel):
-	block = ForeignKeyField(Block)
+	block = ForeignKeyField(Block, on_delete='CASCADE')
 	val = ForeignKeyField(SelectTag)
