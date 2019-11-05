@@ -143,7 +143,6 @@ class StoreExtract():
                     except IntegrityError:
                         key_obj = CSSKey.get(key=key)
 
-                    # TODO: Move processing to __init__
                     if any([(i in val) for i in ('px', '%')]) and 'rgb' not in val:
                         if ' ' in val:
                             cl = []
@@ -232,8 +231,9 @@ class StoreExtract():
 
 class RetrieveData():
 
-    def __init__(self, netloc):
-        self.site = Site.get(netloc=netloc)
+    def site_from_url(self, clean_url):
+        record = Record.get(url=clean_url)
+        self.site = Site.get(record.site)
 
     def fetch_link(self):
         self.record = Record.get(

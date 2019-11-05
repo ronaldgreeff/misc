@@ -232,13 +232,12 @@ class StoreExtract():
 
 class RetrieveData():
 
-    def __init__(self, netloc):
-        self.site = Site.get(netloc=netloc)
-
-    def fetch_link(self):
-        self.record = Record.get(
-            site=self.site,
-            visited=False)
+    def fetch(self, **kwargs):
+        d = {
+            'record': Record,
+        }
+        obj = kwargs.pop('obj')
+        return d[obj].get(**kwargs)
 
 
 if __name__ == '__main__':
