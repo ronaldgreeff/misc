@@ -1,34 +1,62 @@
 #*-*encoding: utf-8*-*
-from lib.selium_obj import Driver, extraction_script
+import os
+# from lib.selium_obj import Driver, extraction_script
 from urllib.parse import urlparse, urlunparse
 from db.persistors import StoreExtract, RetrieveData
 
+PROJECT_ROOT = os.path.join(os.path.dirname(__file__), '..')
+SCREENSHOTS = os.path.join(PROJECT_ROOT, 'data', 'screenshots')
+
 class Crawler():
 	
-	def __init__(self, *urls):
-		self.urls = urls
-		self.selenium = selium_obj.Driver()
-		self.data_store = StoreExtract()
+	def __init__(self, urls):
+		self.init_urls = urls
+		# self.selenium = selium_obj.Driver()
 
-	def get_root_folder(self, parsed_url):
+	def screen_location(self, parsed_url):
 		netloc = parsed_url[1]
 		if 'www.' in netloc:
 			netloc = netloc[3:]
-		folder = netloc.split('.')[0]
 
-	def get_filename(self, parsed_url):
-		path = [i if i.isalnum() for i in parsed_url[2]]
+		folder = ''.join([i for i in netloc if i.isalnum()])
 
-	def info2csv(self, headers, rows, csv_file=,):
-		with open(csv_file, newline='') as csv:
-			for row in rows:
-				csv.write(row)
+		path = parsed_url[2].split('/')
 
-	def extract2db(self,):
-		pass
+		file = path[-1]
+		file = file.split('.')[0]
+		# file = ''.join([i for i in file if i.isalnum()])
 
-	def screenshot(self,):
-		pass
+		file = path.split
+		file = parsed_url[3].split('.')[:-1]
+
+		return os.path.join(SCREENSHOTS, folder, path, file)
+
+
+	def crawl(self, save_screenshot=True):
+		for url in self.init_urls:
+			parsed_url = urlparse(url)
+
+			location = self.screen_location(parsed_url)
+			print(location)
+
+			# screenshot = self.selenium.save_screenshot(location)
+
+			# extract = self.selenium.process_page(url)
+
+			# store = StoreExtract()
+
+			# store.store_data(
+			# 	parsed_url=parsed_url,
+			# 	screenshot=location,
+			# 	extract=extract)
 
 
 if __name__ == '__main__':
+
+	urls = ['https://www.boots.com/bananas/aids/product.html', 
+	'https://www.something.co.uk/bananas/boogers/product2.html', 
+	'https://something.com/penis/aids/product3.html', 
+	'https://something.co.uk/penis/product4.html']
+
+	crawler = Crawler(urls)
+	crawler.crawl()

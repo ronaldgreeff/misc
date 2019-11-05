@@ -7,7 +7,7 @@ import sys
 import os
 from urllib.parse import urlparse, urlunparse
 
-from .models import *
+from models import *
 
 CURRENT_DIR = os.path.dirname(__file__)
 DB_DIR = os.path.join(CURRENT_DIR, 'extracts.db')
@@ -239,6 +239,12 @@ class RetrieveData():
         self.record = Record.get(
             site=self.site,
             visited=False)
+
+    def fetch_links(self):
+        self.record = Record.get(
+            site=self.site,
+            visited=False,
+            limit=50)
 
 
 if __name__ == '__main__':
