@@ -7,7 +7,7 @@ import sys
 import os
 from urllib.parse import urlparse, urlunparse
 
-from .models import *
+from models import *
 
 CURRENT_DIR = os.path.dirname(__file__)
 DB_DIR = os.path.join(CURRENT_DIR, 'extracts.db')
@@ -30,6 +30,7 @@ model_map = {
     'SelectTag': SelectTag,
     'BlockTag': BlockTag,}
 
+
 database = SqliteDatabase(DB_DIR)
 
 class BaseModel(Model):
@@ -39,7 +40,7 @@ class BaseModel(Model):
 def create_tables():
     database.connect()
     with database:
-        database.create_tables(model_map.items())
+        database.create_tables(model_map.values())
     database.close()
 
 
@@ -260,7 +261,7 @@ class RetrieveData():
 
 class Labeller():
 
-    def __init__():
+    def __init__(self):
         self.uh = {
             0: 'landing',
             1: 'misc',
@@ -268,19 +269,40 @@ class Labeller():
             3: 'product',
         }
 
+    def execute_query(self, query):
+        cursor = database.execute_sql(query)
+        for row in cursor.fetchall():
+            print(row)
+
     # def search_by(self, _class, val):
-    def search_selectclass(self, val):
-        raw_query = """
+    def search_selectclass(self, site='www.boots.com', val='skip-link'):
+        query = """
             select site.netloc, record.url, block.* from site
             join record on record.site_id = site.id
             join block on block.record_id = record.id
             join blockclass on blockclass.block_id = block.id
             join selectclass on selectclass.id = blockclass.block_id
-            where blockclass.val_id = (select id from selectclass where val = {})
-        """.format(val)
+            where blockclass.val_id = (select id from selectclass where val = "{val}")
+            and site.netloc = "{site}"
+        """.format(site=site, val=val)
 
-        data = peewee.execute(raw_query)
-        for i in data:
+        cursor = database.execute_sql(query)
+        rows = cursor.fetchall()
+
+        self.temp_hold = {}
+        for c, v in enumerate(rows):
+            self.temp_hold[c] = {
+                'site': v[0],
+                'url': v[1],
+                'block_data': v[2:]
+            }
+
+        if len([self.temp_hold[i]['url'] for i in self.temp_hold]) > 1:
+            print('not unique')
+
+        for i in self.temp_hold:
+            print(i, self.temp_hold[i])
+
             # check unique blocks for same record
             # if not unique, inform
             # else self.data = data
@@ -291,11 +313,11 @@ class Labeller():
         # commit() to label blocks
 
 
-
-
 if __name__ == '__main__':
 
     create_tables()
+    l = Labeller()
+    l.search_selectclass(val="skip-link")
 
     # fd = os.path.join(os.getcwd(), 'extracts.db')
     # x = input('rm db y/n ?')
@@ -316,8 +338,8 @@ if __name__ == '__main__':
     # te = datetime.now()
     # # 823.182472, 77.479282, 149.169063
 
-    netloc = 'www.boots.com'
-    dr = RetrieveData(netloc=netloc)
-    dr.fetch_link()
+    # netloc = 'www.boots.com'
+    # dr = RetrieveData(netloc=netloc)
+    # dr.fetch_link()
 
-    print(dr.record.url)
+    # print(dr.record.url)
