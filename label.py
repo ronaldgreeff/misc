@@ -3,7 +3,7 @@ from db.persistors import StoreExtract, RetrieveData
 
 PROJECT_ROOT = os.path.join(os.path.dirname(__file__), '..')
 
-fetch = RetrieveData().fetch
+retreive = RetrieveData()
 
-record = fetch(obj='record', id=1)
-print(record)
+record = retrieve.fetch(obj='Record', id=1)
+

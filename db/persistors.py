@@ -12,8 +12,25 @@ from .models import *
 CURRENT_DIR = os.path.dirname(__file__)
 DB_DIR = os.path.join(CURRENT_DIR, 'extracts.db')
 
-database = SqliteDatabase(DB_DIR)
+model_map = {
+    'Site': Site,
+    'Record': Record,
+    'ProductDetail': ProductDetail,
+    'Title': Title,
+    'MetaKey': MetaKey,
+    'MetaData': MetaData,
+    'Block': Block,
+    'CSSKey': CSSKey,
+    'Computed': Computed,
+    'Bound': Bound,
+    'SelectClass': SelectClass,
+    'BlockClass': BlockClass,
+    'SelectId': SelectId,
+    'BlockId': BlockId,
+    'SelectTag': SelectTag,
+    'BlockTag': BlockTag,}
 
+database = SqliteDatabase(DB_DIR)
 
 class BaseModel(Model):
     class Meta:
@@ -22,14 +39,7 @@ class BaseModel(Model):
 def create_tables():
     database.connect()
     with database:
-        database.create_tables([Site, Record,
-            ProductDetail,
-            Title, MetaKey, MetaData,
-            Block,
-            CSSKey, Computed,
-            Bound,
-            SelectClass, BlockClass, SelectId, BlockId, SelectTag, BlockTag,
-            ])
+        database.create_tables(model_map.items())
     database.close()
 
 
@@ -232,12 +242,55 @@ class StoreExtract():
 
 class RetrieveData():
 
+    def unvisited_links(self, netloc=False):
+        if netloc:
+            site = Site.get(netloc=netloc)
+            record = Record.select().where(
+                Record.site==site,
+                Record.visited==False)
+        else:
+            record = Record.select().where(Record.site==site)
+        return record
+
+
     def fetch(self, **kwargs):
-        d = {
-            'record': Record,
-        }
         obj = kwargs.pop('obj')
-        return d[obj].get(**kwargs)
+        return model_map[obj].get(**kwargs)
+
+
+class Labeller():
+
+    def __init__():
+        self.uh = {
+            0: 'landing',
+            1: 'misc',
+            2: 'listing',
+            3: 'product',
+        }
+
+    # def search_by(self, _class, val):
+    def search_selectclass(self, val):
+        raw_query = """
+            select site.netloc, record.url, block.* from site
+            join record on record.site_id = site.id
+            join block on block.record_id = record.id
+            join blockclass on blockclass.block_id = block.id
+            join selectclass on selectclass.id = blockclass.block_id
+            where blockclass.val_id = (select id from selectclass where val = {})
+        """.format(val)
+
+        data = peewee.execute(raw_query)
+        for i in data:
+            # check unique blocks for same record
+            # if not unique, inform
+            # else self.data = data
+
+        # if returns more than 1 block, val is not unique enough
+        # else keep track of values
+        # ask whether to assign, store temporarily (can review if needed)
+        # commit() to label blocks
+
+
 
 
 if __name__ == '__main__':
