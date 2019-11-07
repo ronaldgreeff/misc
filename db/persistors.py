@@ -261,8 +261,13 @@ class RetrieveData():
 
 class Labeller():
 
-    def __init__(self):
-        self.uh = {
+    def __init__(self, site='www.boots.com'):
+
+        self.site = Site.get(netloc=site) # instantiate with site, as we'll be working with a single site at a time
+
+        self.data = {} # holds checked data
+
+        self.uh = { # id -> label mapping
             0: 'landing',
             1: 'misc',
             2: 'listing',
@@ -270,12 +275,10 @@ class Labeller():
         }
 
     def execute_query(self, query):
-        cursor = database.execute_sql(query)
-        for row in cursor.fetchall():
-            print(row)
+        return database.execute_sql(query).fetchall()
 
-    # def search_by(self, _class, val):
-    def search_selectclass(self, site='www.boots.com', val='skip-link'):
+    # def search_by(self, _class, val): for getelementsby _id _name _class
+    def search_selectclass(self, val='skip-link', site=self.site):
         query = """
             select site.netloc, record.url, block.* from site
             join record on record.site_id = site.id
@@ -286,31 +289,75 @@ class Labeller():
             and site.netloc = "{site}"
         """.format(site=site, val=val)
 
-        cursor = database.execute_sql(query)
-        rows = cursor.fetchall()
+        query_data = database.execute_sql(query)
+        return val, query_data
 
-        self.temp_hold = {}
+    def hold_temp(self, rows, val):
+
+        self.temp_hold = {'data': {}, 'val': val}
+
         for c, v in enumerate(rows):
-            self.temp_hold[c] = {
+            self.temp_hold['data'][c] = {
                 'site': v[0],
                 'url': v[1],
                 'block_data': v[2:]
             }
 
-        if len([self.temp_hold[i]['url'] for i in self.temp_hold]) > 1:
-            print('not unique')
+    def check_unique(self):
 
-        for i in self.temp_hold:
-            print(i, self.temp_hold[i])
+        unique = False
 
-            # check unique blocks for same record
-            # if not unique, inform
-            # else self.data = data
+        if len([self.temp_hold['data'][i]['url'] for i in self.temp_hold['data']]) = 1:
+            unique = True
 
-        # if returns more than 1 block, val is not unique enough
-        # else keep track of values
-        # ask whether to assign, store temporarily (can review if needed)
-        # commit() to label blocks
+        self.temp_hold = (unique, self.temp_hold)
+
+    def hold_data(self):
+
+        m = 'What type of data is this?\n{}'.format(
+            '{}: {}\n'.format(k,v for k,v in self.uh.items())
+            )
+
+        data_type = input(m)
+        assert(data_type in self.uh.keys())
+
+        self.data[data_type] = self.temp_hold
+
+    def review(self):
+
+        for i in self.data:
+            data_type = i
+            data = self.data[i]['data']
+
+            s = '{}\n{}'.format(
+                self.uh[i],
+                '{}: {}\n'.format(k,v for k,v in data.items()),
+                )
+            print(s)
+
+    def remove_data(self, data_type):
+        self.data.pop(data_type)
+
+    def commit(self):
+
+        inserts = []
+
+        for i in self.data:
+            val = i
+            data = self.data[i]['data']
+
+            # self.data['data'].row = 
+            #         {
+            #             'site': v[0],
+            #             'url': v[1],
+            #             'block_data': v[2:]
+            #         }
+
+            query = """
+            insert into site(netloc) values('a')
+            """.format(site=self.site, val=val)
+
+
 
 
 if __name__ == '__main__':
