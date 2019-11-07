@@ -275,10 +275,11 @@ class Labeller():
         }
 
     def execute_query(self, query):
-        return database.execute_sql(query).fetchall()
+        x = database.execute_sql(query)
+        return x.fetchall()
 
     # def search_by(self, _class, val): for getelementsby _id _name _class
-    def search_selectclass(self, val='skip-link', site=self.site):
+    def search_selectclass(self, val='skip-link'):
         query = """
             select site.netloc, record.url, block.* from site
             join record on record.site_id = site.id
@@ -287,16 +288,15 @@ class Labeller():
             join selectclass on selectclass.id = blockclass.block_id
             where blockclass.val_id = (select id from selectclass where val = "{val}")
             and site.netloc = "{site}"
-        """.format(site=site, val=val)
+        """.format(site=self.site.netloc, val=val)
 
-        query_data = database.execute_sql(query)
-        return val, query_data
+        return query
 
-    def hold_temp(self, rows, val):
+    def hold_temp(self, val, query_data):
 
         self.temp_hold = {'data': {}, 'val': val}
 
-        for c, v in enumerate(rows):
+        for c, v in enumerate(query_data):
             self.temp_hold['data'][c] = {
                 'site': v[0],
                 'url': v[1],
@@ -307,7 +307,7 @@ class Labeller():
 
         unique = False
 
-        if len([self.temp_hold['data'][i]['url'] for i in self.temp_hold['data']]) = 1:
+        if len([self.temp_hold['data'][i]['url'] for i in self.temp_hold['data']]) == 1:
             unique = True
 
         self.temp_hold = (unique, self.temp_hold)
@@ -315,11 +315,10 @@ class Labeller():
     def hold_data(self):
 
         m = 'What type of data is this?\n{}'.format(
-            '{}: {}\n'.format(k,v for k,v in self.uh.items())
-            )
+            self.uh.items())
 
-        data_type = input(m)
-        assert(data_type in self.uh.keys())
+        data_type = int(input(m))
+        assert(data_type in list(self.uh.keys()))
 
         self.data[data_type] = self.temp_hold
 
@@ -331,7 +330,7 @@ class Labeller():
 
             s = '{}\n{}'.format(
                 self.uh[i],
-                '{}: {}\n'.format(k,v for k,v in data.items()),
+                data.items(),
                 )
             print(s)
 
@@ -358,13 +357,17 @@ class Labeller():
             """.format(site=self.site, val=val)
 
 
-
-
 if __name__ == '__main__':
 
     create_tables()
     l = Labeller()
-    l.search_selectclass(val="skip-link")
+    val="skip-link"
+    query = l.search_selectclass(val)
+    query_data = l.execute_query(query)
+    l.hold_temp(val, query_data)
+    l.hold_data()
+    l.review()
+
 
     # fd = os.path.join(os.getcwd(), 'extracts.db')
     # x = input('rm db y/n ?')
