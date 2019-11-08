@@ -279,18 +279,33 @@ class Labeller():
         return x.fetchall()
 
     # def search_by(self, _class, val): for getelementsby _id _name _class
-    def search_selectclass(self, val='skip-link'):
+    def search_by(self, selector, val, site=None):
+        selmap = {
+        'class': ('selectclass', 'blockclass'),
+        'id:': ('selectid', 'blockid'),
+        'tag': ('selecttag', 'blocktag'),
+        }
+
+        selectors = selmap[selector]
+        selector_type = selectors[0]
+        selector_block = selectors[1]
+        site = Site.get(site).netloc if site else self.site.netloc
+
         query = """
-            select site.netloc, record.url, block.* from site
+            select record.url, block.* from site
             join record on record.site_id = site.id
             join block on block.record_id = record.id
-            join blockclass on blockclass.block_id = block.id
-            join selectclass on selectclass.id = blockclass.block_id
-            where blockclass.val_id = (select id from selectclass where val = "{val}")
+            join "{selector_block}" on "{selector_block}".block_id = block.id
+            join "{selector_type}" on "{selector_type}".id = "{selector_block}".block_id
+            where "{selector_block}".val_id = (select id from "{selector_type}" where val = "{val}")
             and site.netloc = "{site}"
-        """.format(site=self.site.netloc, val=val)
+        """.format(
+            selector_type=selector_type,
+            selector_block=selector_block,
+            site=site, val=val)
 
         return query
+
 
     def hold_temp(self, val, query_data):
 
@@ -298,19 +313,22 @@ class Labeller():
 
         for c, v in enumerate(query_data):
             self.temp_hold['data'][c] = {
-                'site': v[0],
-                'url': v[1],
-                'block_data': v[2:]
+                'url': v[0],
+                'block_data': v[1:]
             }
 
     def check_unique(self):
+        """ A selector should be unique and only have 1 instance per page - Checks
+            temp_hold data for a repeated url, meaning the selector is used more 
+            than once throughout a given page.
+        """
 
-        unique = False
+        is_unique = False
 
         if len([self.temp_hold['data'][i]['url'] for i in self.temp_hold['data']]) == 1:
-            unique = True
+            is_unique = True
 
-        self.temp_hold = (unique, self.temp_hold)
+        return is_unique
 
     def hold_data(self):
 
@@ -325,14 +343,14 @@ class Labeller():
     def review(self):
 
         for i in self.data:
-            data_type = i
+            data_type = self.uh[i]
             data = self.data[i]['data']
 
-            s = '{}\n{}'.format(
-                self.uh[i],
-                data.items(),
-                )
-            print(s)
+            print(data_type)
+
+            for c, i in enumerate(data):
+                for k, v in data[i].items():
+                    print('{}  {}: {}'.format(c, k, v))
 
     def remove_data(self, data_type):
         self.data.pop(data_type)
@@ -362,9 +380,12 @@ if __name__ == '__main__':
     create_tables()
     l = Labeller()
     val="skip-link"
-    query = l.search_selectclass(val)
+    query = l.search_by(selector='class', val=val)
+    # query = l.search_selectclass(val)
     query_data = l.execute_query(query)
     l.hold_temp(val, query_data)
+    is_unique = l.check_unique()
+    print('is unique' if is_unique else ('is not unique'))
     l.hold_data()
     l.review()
 
