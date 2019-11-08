@@ -309,10 +309,10 @@ class Labeller():
 
     def hold_temp(self, val, query_data):
 
-        self.temp_hold = {'data': {}, 'val': val}
+        self.temp_hold = {}
 
         for c, v in enumerate(query_data):
-            self.temp_hold['data'][c] = {
+            self.temp_hold[c] = {
                 'url': v[0],
                 'block_data': v[1:]
             }
@@ -325,7 +325,7 @@ class Labeller():
 
         is_unique = False
 
-        if len([self.temp_hold['data'][i]['url'] for i in self.temp_hold['data']]) == 1:
+        if len([self.temp_hold[i]['url'] for i in self.temp_hold]) == 1:
             is_unique = True
 
         return is_unique
@@ -344,7 +344,7 @@ class Labeller():
 
         for i in self.data:
             data_type = self.uh[i]
-            data = self.data[i]['data']
+            data = self.data[i]
 
             print(data_type)
 
@@ -361,14 +361,9 @@ class Labeller():
 
         for i in self.data:
             val = i
-            data = self.data[i]['data']
+            data = self.data[i]
 
-            # self.data['data'].row = 
-            #         {
-            #             'site': v[0],
-            #             'url': v[1],
-            #             'block_data': v[2:]
-            #         }
+            print(data)
 
             query = """
             insert into site(netloc) values('a')
@@ -388,6 +383,7 @@ if __name__ == '__main__':
     print('is unique' if is_unique else ('is not unique'))
     l.hold_data()
     l.review()
+    l.commit()
 
 
     # fd = os.path.join(os.getcwd(), 'extracts.db')
