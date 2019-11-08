@@ -274,19 +274,20 @@ class Labeller():
             3: 'product',
         }
 
+        self.selmap = {
+        'class': ('selectclass', 'blockclass'),
+        'id:': ('selectid', 'blockid'),
+        'tag': ('selecttag', 'blocktag'),
+        }
+
     def execute_query(self, query):
         x = database.execute_sql(query)
         return x.fetchall()
 
     # def search_by(self, _class, val): for getelementsby _id _name _class
     def search_by(self, selector, val, site=None):
-        selmap = {
-        'class': ('selectclass', 'blockclass'),
-        'id:': ('selectid', 'blockid'),
-        'tag': ('selecttag', 'blocktag'),
-        }
 
-        selectors = selmap[selector]
+        selectors = self.selmap[selector]
         selector_type = selectors[0]
         selector_block = selectors[1]
         site = Site.get(site).netloc if site else self.site.netloc
@@ -309,7 +310,7 @@ class Labeller():
 
     def hold_temp(self, val, query_data):
 
-        self.temp_hold = {}
+        self.temp_hold = {} #TODO should be a list holding a dict for each url+block
 
         for c, v in enumerate(query_data):
             self.temp_hold[c] = {
@@ -360,10 +361,10 @@ class Labeller():
         inserts = []
 
         for i in self.data:
-            val = i
-            data = self.data[i]
+            data_type = i
+            record = self.data[i]
+            blocks = self.data[]
 
-            print(data)
 
             query = """
             insert into site(netloc) values('a')
@@ -382,7 +383,7 @@ if __name__ == '__main__':
     is_unique = l.check_unique()
     print('is unique' if is_unique else ('is not unique'))
     l.hold_data()
-    l.review()
+    # l.review()
     l.commit()
 
 
