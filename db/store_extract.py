@@ -1,3 +1,12 @@
+################################
+# 
+# splitting up persistors -
+#   - store scraped data
+#   - persistor (retrieve data for site)
+# 
+################################
+
+
 #*-*encoding: utf-8*-*
 from datetime import datetime
 import peewee

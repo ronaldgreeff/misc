@@ -263,7 +263,8 @@ class Labeller():
 
     def __init__(self, site='www.boots.com'):
 
-        self.site = Site.get(netloc=site) # instantiate with site, as we'll be working with a single site at a time
+        # instantiate with site, as we'll be working with a single site at a time
+        self.site = Site.get(netloc=site)
 
         self.data = {} # holds checked data
 
@@ -372,6 +373,42 @@ class Labeller():
 
 
 if __name__ == '__main__':
+
+    # overview
+    # site-level obj
+    # - site
+    # - query results
+    #     temp block-obj list
+    #         search
+    #         generate page-objs
+    #         remove
+    #         label
+
+    #     non-committal search
+
+    #     introspect query results
+    #         computed
+    #         select_tag
+    #         select_id
+    #         select_class
+
+    #     review temp
+    #     bulk commit labelled
+
+    # block-obj - generated through search (i.e don't retrieve all)
+    # - page titles
+    # - page meta key/values
+    # - page computed
+    # - block id
+    # - block type
+    # - block bounds
+    # - block select_tag
+    # - block select_id
+    # - block select_class
+    # - block label
+    #     update label
+    #     __str__
+    ################################
 
     create_tables()
     l = Labeller()

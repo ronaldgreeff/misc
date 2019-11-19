@@ -16,14 +16,18 @@ class Crawler():
 	def screen_location(self, parsed_url):
 		netloc = parsed_url[1]
 		if 'www.' in netloc:
-			netloc = netloc[3:] # www.boots.com > boots.com
+            # www.boots.com > boots.com
+			netloc = netloc[3:]
 
-		folder = ''.join([i for i in netloc if i.isalnum()]) # boots.com > bootscom
+        # boots.com > bootscom
+		folder = ''.join([i for i in netloc if i.isalnum()])
 
+        # foo/bar/product.html -> path = [foo, bar]
 		split_path = [i for i in parsed_url[2].split('/')]
 		path = split_path[:-1]
 		path = ''.join(path)
 
+        # foo/bar/product.html -> file = product
 		file = split_path[-1]
 		file = file.split('.')[0]
 
@@ -31,21 +35,16 @@ class Crawler():
 
 
 	def crawl(self, save_screenshot=True):
+
 		for url in self.init_urls:
+
 			parsed_url = urlparse(url)
-
 			location = self.screen_location(parsed_url)
-
 			screenshot = self.selenium.save_screenshot(location)
-
 			extract = self.selenium.process_page(url)
 
-			store = StoreExtract()
+			yield parsed_url, screenshot, extract
 
-			store.store_data(
-				parsed_url=parsed_url,
-				screenshot=location,
-				extract=extract)
 
 
 if __name__ == '__main__':
@@ -53,7 +52,13 @@ if __name__ == '__main__':
 	urls = google_search()
 
 	crawler = Crawler(urls)
-	crawler.crawl()
+	for parsed_url, screenshot, extract in crawler.crawl():
+		store = StoreExtract()
+
+		store.store_data(
+			parsed_url=parsed_url,
+			screenshot=location,
+			extract=extract)
 
 	# continue crawling
 
