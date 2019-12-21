@@ -9,17 +9,18 @@ SCREENSHOTS = os.path.join(PROJECT_ROOT, 'data', 'screenshots')
 
 class Crawler():
 	
-	def __init__(self, urls):
+	def __init__(self, urls, json_ids=None):
 		self.init_urls = urls
+		self.json_ids = json_ids
 		# self.selenium = selium_obj.Driver()
 
 	def screen_location(self, parsed_url):
 		netloc = parsed_url[1]
 		if 'www.' in netloc:
-            # www.boots.com > boots.com
+            # www.boots.com -> boots.com
 			netloc = netloc[3:]
 
-        # boots.com > bootscom
+        # boots.com -> bootscom
 		folder = ''.join([i for i in netloc if i.isalnum()])
 
         # foo/bar/product.html -> path = [foo, bar]
@@ -42,8 +43,9 @@ class Crawler():
 			location = self.screen_location(parsed_url)
 			screenshot = self.selenium.save_screenshot(location)
 			extract = self.selenium.process_page(url)
+			# TODO page_type = self.selenium.identify_page( self.json_ids.get(parsed_url.netloc) ) if self.json_ids
 
-			yield parsed_url, screenshot, extract
+			yield parsed_url, screenshot, extract#, page_type
 
 
 
@@ -51,7 +53,11 @@ if __name__ == '__main__':
 
 	urls = google_search()
 
+	# TODO json file storing identifiers for each page
+	# domain: {landing, listing, product}
+
 	crawler = Crawler(urls)
+
 	for parsed_url, screenshot, extract in crawler.crawl():
 		store = StoreExtract()
 
